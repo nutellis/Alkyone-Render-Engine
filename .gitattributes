@@ -1,0 +1,6 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force C++ sources to LF
+*.cpp text eol=lf
+*.h   text eol=lf
