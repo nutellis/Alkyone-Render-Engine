@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="TArray&lt;*&gt;">
+		<DisplayString>{{Size={ArraySize}, Capacity={StorageSize}}}</DisplayString>
+		<Expand>
+			<Item Name="[Size]">ArraySize</Item>
+			<Item Name="[Capacity]">StorageSize</Item>
+			<ArrayItems>
+				<Size>ArraySize</Size>
+				<ValuePointer>First</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	
+	<!-- Visualization for PMaterial -->
+	<Type Name="PMaterial">
+		<DisplayString>{{MaterialID={MaterialID}, ShaderID={ShaderID}}}</DisplayString>
+		<Expand>
+			<Item Name="MaterialID">MaterialID</Item>
+			<Item Name="ShaderID">ShaderID</Item>
+			<Item Name="Emissive">Emissive</Item>
+			<Item Name="Ambient">Ambient</Item>
+			<Item Name="Diffuse">Diffuse</Item>
+			<Item Name="Specular">Specular</Item>
+			<Item Name="Normal">Normal</Item>
+			<Item Name="Shinness">Shinness</Item>
+		</Expand>
+	</Type>
+
+	<!-- Visualization for PStaticMesh -->
+	<Type Name="PStaticMesh">
+		<DisplayString>{{Vertices={Vertices.ArraySize}, Indices={Indices.ArraySize}}}</DisplayString>
+		<Expand>
+			<Item Name="Vertices">Vertices</Item>
+			<Item Name="Indices">Indices</Item>
+			<Item Name="VAO">VAO</Item>
+			<Item Name="VBO">VBO</Item>
+			<Item Name="Parent">Parent</Item>
+		</Expand>
+	</Type>
+
+	<!-- Visualization for Asset -->
+	<Type Name="Asset">
+		<DisplayString>{{Vertices={Vertex.ArraySize}, Indices={indices.ArraySize}, Materials={Materials.ArraySize}}}</DisplayString>
+		<Expand>
+			<Item Name="Vertex">Vertex</Item>
+			<Item Name="Indices">indices</Item>
+			<Item Name="Materials">Materials</Item>
+			<Item Name="MaterialIndexMapping">MaterialIndexMapping</Item>
+		</Expand>
+	</Type>
+
+	<!-- Visualization for Shader -->
+	<Type Name="Shader">
+		<DisplayString>{{ID={ID}, Name={Name}}}</DisplayString>
+		<Expand>
+			<Item Name="ID">ID</Item>
+			<Item Name="Name">Name</Item>
+			<Item Name="Uniforms">Uniforms</Item>
+		</Expand>
+	</Type>
+
+	<!-- Visualization for TVector4 -->
+	<Type Name="TVector4&lt;*&gt;">
+		<DisplayString>({X}, {Y}, {Z}, {W})</DisplayString>
+		<Expand>
+			<Item Name="X">X</Item>
+			<Item Name="Y">Y</Item>
+			<Item Name="Z">Z</Item>
+			<Item Name="W">W</Item>
+		</Expand>
+	</Type>
+
+	<!-- Visualization for TMatrix4 -->
+	<Type Name="TMatrix4&lt;*&gt;">
+		<DisplayString>Matrix4x4</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>4</Size>
+				<ValuePointer>M</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+</AutoVisualizer>

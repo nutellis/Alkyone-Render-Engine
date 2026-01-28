@@ -1,20 +1,18 @@
 #include <iostream>
-#include <GLFW/glfw3.h>
+#include <core/Engine.h>
+
 // TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-int main()
+int main(int argc, char* argv[])
 {
-    // TIP Press <shortcut actionId="RenameElement"/> when your caret is at the <b>lang</b> variable name to see how CLion can help you rename it.
-    auto lang = "C++";
-    std::cout << "Hello and welcome to " << lang << "!\n";
+    AlkyoneRenderEngine* engine = new AlkyoneRenderEngine();
 
-    for (int i = 1; i <= 5; i++)
+    if (engine->Initialize() == false)
     {
-        // TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-        std::cout << "i = " << i << std::endl;
-    }
-
-    if (!glfwInit()) {
-        return -1;
+        exit(EXIT_FAILURE);
+    } else
+    {
+        engine->Run();
+        engine->Terminate();
     }
 
     return 0;
