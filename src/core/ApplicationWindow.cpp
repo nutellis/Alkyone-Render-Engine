@@ -21,6 +21,12 @@ ARWindow::~ARWindow()
 
 bool ARWindow::Initialize()
 {
+    //TODO: remove hardcoded. get info from init options json
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+
+    //TODO: remove hardcoded. get info from init options json
     const bool success =
         CreateWindow("Alkyone Render Engine", 1280, 720, false)
         && InitializeContext();
@@ -90,6 +96,7 @@ glfwGetVideoMode(monitorHandle)->height);
 
 bool ARWindow::InitializeContext()
 {
+    //TODO: remove hardcoded. get info from init options json
     contextHandle = IGraphicsContext::CreateContext(windowHandle, RendererBackend::Vulkan);
 
     if (contextHandle == nullptr)

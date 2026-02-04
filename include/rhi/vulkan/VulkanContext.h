@@ -4,13 +4,18 @@
 
 #ifndef ALKYONERENDERENGINE_VULKANCONTEXT_H
 #define ALKYONERENDERENGINE_VULKANCONTEXT_H
-#include "IGraphicsContext.h"
+#include <unordered_map>
+
+#include <rhi/IGraphicsContext.h>
 
 #include <volk/volk.h>
 #include <vk_mem_alloc.h>
 
 #include <vector>
 #include <core/PODTypes.h>
+
+#include "containers/SlotMap.h"
+#include "rhi/IGraphicsPipeline.h"
 
 #ifdef NDEBUG
 constexpr bool enableValidationLayers = false;
@@ -27,6 +32,8 @@ const std::vector deviceExtensions = {
 };
 
 class ARWindow;
+
+using PipelineId = SlotMap<VkPipeline>::ElementId;
 
 struct QueueFamilyIndices {
     uint32 graphicsFamily;
@@ -53,12 +60,16 @@ class VulkanContext: public IGraphicsContext
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 
     std::vector<VkImage> swapChainImages;
-    VkFormat swapChainImageFormat;
+    VkFormat imageFormat;
+    VkFormat depthFormat;
     VkExtent2D swapChainExtent;
 
     std::vector<VkImageView> swapChainImageViews;
 
     GLFWwindow * window = nullptr;
+
+    SlotMap<VkPipeline> pipelinesStorage;
+    std::unordered_map<size_t, uint32> pipelineCache;
 
 public:
 
@@ -69,7 +80,9 @@ public:
     bool Initialize() override;
     void Terminate() override;
     void SwapBuffers() override;
+    std::string GetBackendString() override;
 
+    uint32 CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
 
 private:
     bool CreateInstance();
@@ -79,8 +92,8 @@ private:
     bool CreateVMAAllocator();
     bool CreateSwapChain();
     bool CreateImageViews();
-
 };
+
 
 
 #endif //ALKYONERENDERENGINE_VULKANCONTEXT_H

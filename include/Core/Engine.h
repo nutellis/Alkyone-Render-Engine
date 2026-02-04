@@ -4,6 +4,7 @@
 
 #ifndef ALKYONERENDERENGINE_ENGINE_H
 #define ALKYONERENDERENGINE_ENGINE_H
+#include "shaders/ShaderManager.h"
 
 class ARWindow;
 
@@ -18,6 +19,8 @@ class AlkyoneRenderEngine
     // the actual renderer
 private:
     ARWindow *window;
+
+    ShaderManager *shaderManager;
 
 public:
     AlkyoneRenderEngine();

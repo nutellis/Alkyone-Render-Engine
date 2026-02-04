@@ -8,7 +8,7 @@
 #include "PODTypes.h"
 #include <string>
 
-#include "context/IGraphicsContext.h"
+#include "rhi/IGraphicsContext.h"
 #include "GLFW/glfw3.h"
 
 struct GLFWwindow;

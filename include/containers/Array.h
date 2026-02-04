@@ -1,4 +1,7 @@
-#pragma once
+
+#ifndef ARRAY_HPP
+#define ARRAY_HPP
+
 
 #include <core/PODTypes.h>
 
@@ -594,3 +597,5 @@ public:
 		ConstIterator begin() const { return ConstIterator(First); }
 		ConstIterator end() const { return ConstIterator(Last); }
 };
+
+#endif

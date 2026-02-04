@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include "rendering/Mesh.h"
+#include "spdlog/spdlog.h"
 #include "utilities/GLTFLoader.h"
 
 AlkyoneRenderEngine::AlkyoneRenderEngine() : window(nullptr)
@@ -20,19 +21,7 @@ AlkyoneRenderEngine::~AlkyoneRenderEngine()
 
 bool AlkyoneRenderEngine::Initialize()
 {
-    if (glfwInit())
-    {
-        //LOG(INFO, "GLFW: Initialized");
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-        window = new ARWindow();
-        window->Initialize();
-
-
-        //LOG(INFO, "WINDOW_MANAGER INITIATED\n");
-    }
-    else
+    if (glfwInit() == false)
     {
         //LOG(ERROR, "GLFW cannot be initialized");
         //LOG(ERROR, "It's fine, really. Nothing is working though. :) ");
@@ -42,6 +31,17 @@ bool AlkyoneRenderEngine::Initialize()
 
         return false;
     }
+
+    spdlog::info("GLFW: Initialized");
+
+    window = new ARWindow();
+    window->Initialize();
+
+    shaderManager = new ShaderManager();
+
+    //TODO: a getter would be nice
+    shaderManager->Initialize(window->contextHandle->slangTargetOptions);
+
     return true;
 }
 

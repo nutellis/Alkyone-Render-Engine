@@ -2,7 +2,7 @@
 // Created by Nutellis on 20-Jan-26.
 //
 
-#include "context/VulkanContext.h"
+#include "../../include/rhi/vulkan/VulkanContext.h"
 #include <GLFW/glfw3.h>
 
 #define VOLK_IMPLEMENTATION
@@ -12,6 +12,7 @@
 #include <set>
 #include <vk_mem_alloc.h>
 
+#include "rhi/vulkan/VulkanGraphicsPipeline.h"
 #include "spdlog/spdlog.h"
 
 namespace
@@ -147,11 +148,28 @@ namespace
 
         return vulkanExtensions;
     }
+
+    // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function#:~:text=FNV%2D1a%20hash%5Bedit%5D
+    inline size_t hashPipeline(const GraphicsPipelineDesc& desc)
+    {
+        size_t hashBasis = 0xcbf29ce484222325;
+
+        const uint8* data = reinterpret_cast<const uint8*>(&desc);
+
+        for (size_t i = 0; i < sizeof(GraphicsPipelineDesc); ++i)
+        {
+            hashBasis = hashBasis ^ data[i];
+            hashBasis   = hashBasis * 1099511628211;
+        }
+
+        return hashBasis;
+    }
 }
 
 
 VulkanContext::VulkanContext()
 {
+
 }
 
 VulkanContext::VulkanContext(GLFWwindow* window) : window(window)
@@ -168,7 +186,7 @@ bool VulkanContext::Initialize()
     spdlog::info("Alkyone RHI: Initializing VulkanContext");
     if (volkInitialize() != VK_SUCCESS)
     {
-        spdlog::error("Alkyone RHI: Critical failure Volk Failed to Initialize");
+        spdlog::error("Alkyone RHI: Critical failure, Volk Failed to Initialize");
         return false;
     }
 
@@ -178,24 +196,29 @@ bool VulkanContext::Initialize()
         return false;
     }
 
-    const bool success =
-        CreateInstance()
+    if (CreateInstance()
         && CreateSurface()
         && PickPhysicalDevice()
         && CreateLogicalDevice()
         && CreateVMAAllocator()
         && CreateSwapChain()
-        && CreateImageViews();
-
-    if (success == false)
+        && CreateImageViews() == false)
     {
         spdlog::error("Alkyone RHI: Critical failure during Vulkan initialization");
         Terminate();
-        return success;
+        return false;
     }
 
+    backend = RendererBackend::Vulkan;
+    slangTargetOptions = ContextSlangTargetOptions(
+        SLANG_SPIRV,
+        "spirv_1_4",
+        slang::CompilerOptionName::EmitSpirvDirectly,
+        {slang::CompilerOptionValueKind::Int, 1}
+    );
+
     spdlog::info("Alkyone RHI: Context Initialized Successfully");
-    return success;
+    return true;
 }
 
 void VulkanContext::Terminate()
@@ -219,6 +242,36 @@ void VulkanContext::Terminate()
 
 void VulkanContext::SwapBuffers()
 {
+}
+
+std::string VulkanContext::GetBackendString()
+{
+    //silly check but fuck it, you never now.
+    if (backend == RendererBackend::Vulkan)
+    {
+        return "Vulkan";
+    }
+
+    return "Backend Error";
+}
+
+uint32 VulkanContext::CreateGraphicsPipeline(const GraphicsPipelineDesc& desc)
+{
+    size_t hash = hashPipeline(desc);
+
+    //check if pipeline exists
+    if (pipelineCache.contains(hash))
+    {
+        return pipelineCache[hash];
+    }
+
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    pipeline = VulkanGraphicsPipeline::CreatePipeline(desc);
+    uint32 index =  pipelinesStorage.createSlot(pipeline).index;
+
+    pipelineCache[hash] = index;
+
+    return index;
 }
 
 bool VulkanContext::CreateInstance()
@@ -422,7 +475,7 @@ bool VulkanContext::CreateSwapChain()
         return false;
     }
 
-    swapChainImageFormat = imageFormat;
+    imageFormat = imageFormat;
     swapChainExtent = swapChainSupportDetails.capabilities.currentExtent;
 
     uint32 imageCount = 0;
@@ -446,7 +499,7 @@ bool VulkanContext::CreateImageViews()
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = swapChainImages[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = swapChainImageFormat,
+            .format = imageFormat,
             .components {
                 .r = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .g = VK_COMPONENT_SWIZZLE_IDENTITY,

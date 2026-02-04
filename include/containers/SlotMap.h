@@ -7,13 +7,16 @@
 
 #include "Containers\Array.h"
 
+#include
+
 template <typename T>
-class SlotMap
+struct SlotMap
 {
-protected:
+
+public:
     struct ElementId
     {
-        Element() : isAlive(0), generation(0), index(0)
+        ElementId() : isAlive(0), generation(0), index(0)
         {
         }
 
@@ -21,11 +24,10 @@ protected:
         uint32 generation: 15;
         uint32 index: 16;
 
-        uint32 ID() const
+        [[nodiscard]] uint32 ID() const
         {
             return ( (isAlive << 31) | (generation << 16) | index );
         }
-
     };
 
 public:
@@ -45,7 +47,7 @@ public:
 
             return indices[index];
         }
-        else
+        else //first time using this slot
         {
             uint32 const index = static_cast<uint32>(data.Size());
             data.PushBack(std::move(slotObject));
@@ -59,19 +61,36 @@ public:
     bool destroySlot(ElementId id)
     {
         //check if the id is valid
-        if (true)
+        if (IsIdValid(id))
         {
-            data[static_cast<uint32>(id.index)] = nullptr;
+            size_t const index = static_cast<size_t>(id.index);
 
-            ++indices[id.index].generation;
-            indices[id.index].isAlive = 0;
-            if (indices[static_cast<size_t>(id.index)] < std::numeric_limits<uint16>::max())
+            //free the data at the index
+            delete data[index];
+            data[index] = T{};
+
+            indices[index].generation = (indices[index].generation + 1) & 0x7FFF;
+
+            indices[index].isAlive = 0;
+
+            if (indices[static_cast<size_t>(index)] < std::numeric_limits<uint16>::max())
             {
-                freeSlotsTracker.PushBack(id.index);
+                freeSlotsTracker.PushBack(index);
             }
             return true;
         }
         return false;
+    }
+
+    bool IsIdValid(ElementId id)
+    {
+        size_t const index = static_cast<uint32>(id.index);
+        const bool validation =  index < data.Size()
+            && indices[index].isAlive
+            && id.generation == indices[index].generation;
+
+        return validation;
+
     }
 
 private:

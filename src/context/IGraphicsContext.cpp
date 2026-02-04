@@ -2,9 +2,9 @@
 // Created by Nutellis on 20-Jan-26.
 //
 
-#include "context/IGraphicsContext.h"
+#include "rhi/IGraphicsContext.h"
 
-#include "context/VulkanContext.h"
+#include "../../include/rhi/vulkan/VulkanContext.h"
 #include "GLFW/glfw3.h"
 
 

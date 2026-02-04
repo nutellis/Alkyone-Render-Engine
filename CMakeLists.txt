@@ -29,16 +29,20 @@ set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
 set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
 
 # Slang Fetch -----------------------------------------------------------
-include(FetchContent)
+#include(FetchContent)
+#
+#FetchContent_Declare(
+#        slang
+#        GIT_REPOSITORY https://github.com/shader-slang/slang.git
+#        GIT_TAG 97c5d06643364a31a94d3358b7b8788defad5ea2
+#        GIT_SHALLOW ON
+#)
+#FetchContent_MakeAvailable(slang)
 
-FetchContent_Declare(
-        slang
-        GIT_REPOSITORY https://github.com/shader-slang/slang.git
-        GIT_TAG 97c5d06643364a31a94d3358b7b8788defad5ea2
-        GIT_SHALLOW ON
-)
-FetchContent_MakeAvailable(slang)
+
 #-------------------------------------------------------------------------
+
+
 
 add_subdirectory(external/glfw-3.4)
 add_subdirectory(external/volk-1.4.304)
@@ -51,12 +55,23 @@ add_subdirectory(external/tinygltf-2.9.7)
 
 find_package(Vulkan REQUIRED)
 
+include_directories($ENV{VULKAN_SDK}/include/slang)
+find_library(Slang_LIBRARY NAMES slang slang-compiler HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
+
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 add_executable(AlkyoneRenderer main.cpp ${SRC_FILES}
         src/scene/Scene.cpp
         include/scene/Scene.h
-        include/containers/SlotMap.h)
+        include/containers/SlotMap.h
+        include/shaders/ShaderManager.cpp
+        include/shaders/ShaderManager.h
+        include/utilities/FileUtilities.h
+        include/rhi/GraphicsPipelineDesc.h
+        include/rhi/IGraphicsPipeline.h
+        include/rhi/vulkan/VulkanGraphicsPipeline.cpp
+        include/rhi/vulkan/VulkanGraphicsPipeline.h
+        include/rhi/vulkan/VulkanDefinitions.h)
 
 target_compile_options(AlkyoneRenderer
         PRIVATE
@@ -74,6 +89,9 @@ target_include_directories(AlkyoneRenderer PRIVATE
 )
 
 target_compile_definitions(AlkyoneRenderer PRIVATE VK_NO_PROTOTYPES)
+if (WIN32)
+    target_compile_definitions(AlkyoneRenderer PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
 
 target_link_libraries(AlkyoneRenderer PRIVATE
         glfw
@@ -82,9 +100,9 @@ target_link_libraries(AlkyoneRenderer PRIVATE
         glm::glm
         tinyobjloader
         ktx
-        slang
+        ${Slang_LIBRARY}
+        ${SlangCompiler_LIBRARY}
         spdlog::spdlog
         Vulkan::Vulkan
         tinygltf
 )
-
