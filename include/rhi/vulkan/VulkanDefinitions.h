@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-static const VkCompareOp VulkanCompareOps[] = {
+static constexpr VkCompareOp VulkanCompareOps[] = {
     VK_COMPARE_OP_NEVER,
     VK_COMPARE_OP_LESS,
     VK_COMPARE_OP_EQUAL,
@@ -16,6 +16,32 @@ static const VkCompareOp VulkanCompareOps[] = {
     VK_COMPARE_OP_NOT_EQUAL,
     VK_COMPARE_OP_GREATER_OR_EQUAL,
     VK_COMPARE_OP_ALWAYS
+};
+
+static constexpr VkFormat VulkanFormats[] = {
+    VK_FORMAT_R32G32B32_SFLOAT,
+    VK_FORMAT_R32G32_SFLOAT,
+    VK_FORMAT_B8G8R8A8_SRGB,
+    VK_FORMAT_D32_SFLOAT_S8_UINT,
+    VK_FORMAT_D24_UNORM_S8_UINT
+};
+
+static constexpr VkPolygonMode VulkanPolygonModes[] = {
+    VK_POLYGON_MODE_POINT,
+    VK_POLYGON_MODE_LINE,
+    VK_POLYGON_MODE_FILL
+};
+
+static constexpr VkCullModeFlags VulkanCullModes[] = {
+    VK_CULL_MODE_NONE,
+    VK_CULL_MODE_FRONT_BIT,
+    VK_CULL_MODE_BACK_BIT,
+    VK_CULL_MODE_FRONT_AND_BACK
+};
+
+static constexpr VkFrontFace VulkanFrontFace[] = {
+    VK_FRONT_FACE_COUNTER_CLOCKWISE,
+    VK_FRONT_FACE_CLOCKWISE
 };
 
 

@@ -8,12 +8,7 @@
 
 ARWindow::ARWindow() : windowHandle(nullptr), monitorHandle(nullptr), contextHandle(nullptr), width(0), height(0),
                        frameCount(0), windowFlags()
-{
-    int count;
-    GLFWmonitor** monitors = glfwGetMonitors(&count);
-    //LOG(INFO, "%d", count);
-    monitorHandle = glfwGetPrimaryMonitor();
-}
+{}
 
 ARWindow::~ARWindow()
 {
@@ -21,6 +16,11 @@ ARWindow::~ARWindow()
 
 bool ARWindow::Initialize()
 {
+    int count;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+
+    monitorHandle = glfwGetPrimaryMonitor();
+
     //TODO: remove hardcoded. get info from init options json
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -43,7 +43,7 @@ bool ARWindow::Initialize()
     return success;
 }
 
-void ARWindow::Terminate()
+void ARWindow::Terminate() const
 {
     glfwDestroyWindow(windowHandle);
 }
@@ -96,7 +96,7 @@ glfwGetVideoMode(monitorHandle)->height);
 
 bool ARWindow::InitializeContext()
 {
-    //TODO: remove hardcoded. get info from init options json
+    //TODO: remove hardcoded. get info from init options, json
     contextHandle = IGraphicsContext::CreateContext(windowHandle, RendererBackend::Vulkan);
 
     if (contextHandle == nullptr)

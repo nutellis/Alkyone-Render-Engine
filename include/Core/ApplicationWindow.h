@@ -49,7 +49,7 @@ public:
 
 public:
     bool Initialize();
-    void Terminate();
+    void Terminate() const;
     bool CreateWindow(const std::string& windowName, uint32 inWidth, uint32 inHeight, bool bisFullScreen);
     bool InitializeContext();
     void ResizeWindow(int width, int height);

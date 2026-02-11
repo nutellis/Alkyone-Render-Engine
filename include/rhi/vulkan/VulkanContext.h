@@ -32,6 +32,7 @@ const std::vector deviceExtensions = {
 };
 
 class ARWindow;
+class VulkanGraphicsPipeline;
 
 using PipelineId = SlotMap<VkPipeline>::ElementId;
 
@@ -54,21 +55,25 @@ class VulkanContext: public IGraphicsContext
     VkQueue graphicsQueue = VK_NULL_HANDLE;
 
     VmaAllocator allocator{ VK_NULL_HANDLE };
+    VmaAllocation depthImageAllocation;
 
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 
     std::vector<VkImage> swapChainImages;
+    VkImage depthImage;
+
     VkFormat imageFormat;
     VkFormat depthFormat;
     VkExtent2D swapChainExtent;
 
     std::vector<VkImageView> swapChainImageViews;
+    VkImageView depthImageView;
 
     GLFWwindow * window = nullptr;
 
-    SlotMap<VkPipeline> pipelinesStorage;
+    std::vector<VulkanGraphicsPipeline> pipelineStorage;
     std::unordered_map<size_t, uint32> pipelineCache;
 
 public:
@@ -81,8 +86,7 @@ public:
     void Terminate() override;
     void SwapBuffers() override;
     std::string GetBackendString() override;
-
-    uint32 CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
+    uint32_t CreateGraphicsPipeline(const GraphicsPipelineDesc& desc) override;
 
 private:
     bool CreateInstance();
@@ -92,6 +96,7 @@ private:
     bool CreateVMAAllocator();
     bool CreateSwapChain();
     bool CreateImageViews();
+
 };
 
 

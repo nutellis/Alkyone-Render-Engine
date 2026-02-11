@@ -9,6 +9,7 @@
 
 #include "slang.h"
 
+struct GraphicsPipelineDesc;
 struct GLFWwindow;
 
 enum class RendererBackend {
@@ -36,6 +37,8 @@ public:
     virtual void SwapBuffers() = 0;
 
     virtual std::string GetBackendString() = 0;
+
+    virtual uint32_t CreateGraphicsPipeline(const GraphicsPipelineDesc& desc) = 0;
 
     static IGraphicsContext* CreateContext(GLFWwindow * windowHandle, RendererBackend rendererBackend);
 

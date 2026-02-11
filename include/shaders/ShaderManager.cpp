@@ -2,6 +2,7 @@
 // Created by Nutellis on 29-Jan-26.
 //
 
+#include <core/PODTypes.h>
 #include <array>
 #include <shaders/ShaderManager.h>
 
@@ -21,7 +22,7 @@ bool ShaderManager::Initialize(const ContextSlangTargetOptions& slangInitOptions
     auto slangTargets{
         std::to_array<slang::TargetDesc>({ {
             .format = slangInitOptions.format,
-            .profile =globalSession->findProfile(slangInitOptions.profile.c_str()),
+            .profile = globalSession->findProfile(slangInitOptions.profile.c_str()),
             }
         })
     };
@@ -31,20 +32,19 @@ bool ShaderManager::Initialize(const ContextSlangTargetOptions& slangInitOptions
         slangInitOptions.value
     } }) };
 
-    const char * searchPaths[] = { "shaders/" };
+    const char * searchPaths[] = { "../shaders/" };
 
     slang::SessionDesc slangSessionDesc{
-        .targets =slangTargets.data(),
-        .targetCount = SlangInt(slangTargets.size()),
+        .targets = slangTargets.data(),
+        .targetCount = static_cast<SlangInt>(slangTargets.size()),
         .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
         .searchPaths = searchPaths,
         .searchPathCount = 1,
         .compilerOptionEntries = slangOptions.data(),
-        .compilerOptionEntryCount = uint32_t(slangTargets.size())
+        .compilerOptionEntryCount = static_cast<uint32>(slangOptions.size())
 
     };
 
-    Slang::ComPtr<slang::ISession> slangSession;
     if (globalSession->createSession(slangSessionDesc, slangSession.writeRef()) != SLANG_OK)
     {
         spdlog::error("Slang failed to Create Session");

@@ -9,9 +9,6 @@
 #include "slang.h"
 #include "rhi/IGraphicsContext.h"
 
-
-using namespace  slang;
-
 class ShaderManager
 {
 public:
@@ -24,7 +21,8 @@ public:
     Currently, the global session should be freed after any objects created from it.
     */
 
-    Slang::ComPtr<IGlobalSession> globalSession;
+    Slang::ComPtr<slang::IGlobalSession> globalSession;
+    Slang::ComPtr<slang::ISession> slangSession;
     SlangGlobalSessionDesc desc = {};
 
     bool Initialize(const ContextSlangTargetOptions& slangInitOptions);

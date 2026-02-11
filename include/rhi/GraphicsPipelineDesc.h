@@ -5,9 +5,11 @@
 #ifndef ALKYONERENDERENGINE_PIPELINEDESCR_H
 #define ALKYONERENDERENGINE_PIPELINEDESCR_H
 
+#include <slang-com-ptr.h>
+#include <vector>
 #include <core/PODTypes.h>
 
-typedef enum LogicOp {
+enum LogicOp {
     OP_CLEAR = 0, // VK_LOGIC_OP_CLEAR | D3D12_LOGIC_OP_CLEAR
     OP_AND, // VK_LOGIC_OP_AND | D3D12_LOGIC_OP_AND
     OP_AND_REVERSE, // VK_LOGIC_OP_AND_REVERSE | D3D12_LOGIC_OP_AND_REVERSE
@@ -37,6 +39,14 @@ enum PrimitiveTopology
     PRIMITIVE_TOPOLOGY_TRIANGLE_FAN // VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN | D3D_PRIMITIVE_TOPOLOGY_TRIANGLEFAN
 };
 
+//Using any mode other than fill requires enabling a GPU feature.
+enum PolygonMode
+{
+    POLYGON_MODE_POINT = 0,
+    POLYGON_MODE_LINE,
+    POLYGON_MODE_FILL
+};
+
 enum CompareOp
 {
     OP_NEVER, // VK_COMPARE_OP_NEVER | D3D12_COMPARISON_FUNC_NEVER
@@ -53,19 +63,36 @@ enum CompareOp
 enum Format
 {
     FORMAT_R32G32B32_SFLOAT, // VK_FORMAT_R32G32B32_SFLOAT
-    FORMAT_R32G32_SFLOAT // VK_FORMAT_R32G32_SFLOAT
+    FORMAT_R32G32_SFLOAT, // VK_FORMAT_R32G32_SFLOAT
+    FORMAT_B8G8R8A8_SRGB, // VK_FORMAT_B8G8R8A8_SRGB
+    FORMAT_D32_SFLOAT_S8_UINT, // VK_FORMAT_D32_SFLOAT_S8_UINT
+    FORMAT_D24_UNORM_S8_UINT // VK_FORMAT_D24_UNORM_S8_UINT
 };
 
+enum CullMode {
+    CULL_MODE_NONE = 0, // VK_CULL_MODE_NONE | D3D12_CULL_MODE_NONE
+    CULL_MODE_FRONT_BIT, // VK_CULL_MODE_FRONT_BIT | D3D12_CULL_MODE_FRONT
+    CULL_MODE_BACK_BIT, // VK_CULL_MODE_BACK_BIT | D3D12_CULL_MODE_BACK
+    CULL_MODE_FRONT_AND_BACK // VK_CULL_MODE_FRONT_AND_BACK | D3D12 not supported, use NONE
+};
 
-
+enum FrontFace
+{
+    FRONT_FACE_COUNTER_CLOCKWISE = 0, // VK_FRONT_FACE_COUNTER_CLOCKWISE | D3D12 = TRUE
+    FRONT_FACE_CLOCKWISE // VK_FRONT_FACE_CLOCKWISE | D3D12 = FALSE
+};
 struct GraphicsPipelineDesc
 {
     //shaders of type Slang::ComPtr<slang::IModule>. For starters, we support separate files for each shader to avoid complexity
     // vertex
+    Slang::ComPtr<slang::IModule> vertexShaderModule;
     // fragment/pixel
+    Slang::ComPtr<slang::IModule> fragmentShaderModule;
     //tessellation related (hull domain)
     //geometry
 
+    std::vector<Format> imageFormats;
+    Format depthImageFormat;
 
     uint32 viewportCount;
     uint32 scissorCount;
@@ -76,6 +103,9 @@ struct GraphicsPipelineDesc
     uint32 renderTargetCount; // attachmentCount | renderTarget
 
     PrimitiveTopology primitiveTopology;
+    PolygonMode polygonMode;
+    CullMode cullMode;
+    FrontFace frontFace;
 
     bool depthTestEnable;
     bool depthWriteEnable;

@@ -2,7 +2,7 @@
 // Created by Nutellis on 20-Jan-26.
 //
 
-#include "../../include/rhi/vulkan/VulkanContext.h"
+#include "../../../include/rhi/vulkan/VulkanContext.h"
 #include <GLFW/glfw3.h>
 
 #define VOLK_IMPLEMENTATION
@@ -159,7 +159,7 @@ namespace
         for (size_t i = 0; i < sizeof(GraphicsPipelineDesc); ++i)
         {
             hashBasis = hashBasis ^ data[i];
-            hashBasis   = hashBasis * 1099511628211;
+            hashBasis = hashBasis * 1099511628211;
         }
 
         return hashBasis;
@@ -265,9 +265,11 @@ uint32 VulkanContext::CreateGraphicsPipeline(const GraphicsPipelineDesc& desc)
         return pipelineCache[hash];
     }
 
-    VkPipeline pipeline = VK_NULL_HANDLE;
-    pipeline = VulkanGraphicsPipeline::CreatePipeline(desc);
-    uint32 index =  pipelinesStorage.createSlot(pipeline).index;
+    VulkanGraphicsPipeline pipeline = VulkanGraphicsPipeline();
+    pipeline.CreatePipeline(desc, logicalDevice);
+
+    pipelineStorage.push_back(pipeline);
+    uint32 index = pipelineStorage.size();
 
     pipelineCache[hash] = index;
 
@@ -413,7 +415,6 @@ bool VulkanContext::CreateLogicalDevice()
         return false;
     }
 
-
     vkGetDeviceQueue(logicalDevice, indexFamily, 0, &graphicsQueue);
 
     spdlog::info("Vulkan Logical Device Initialized Successfully");
@@ -450,7 +451,10 @@ bool VulkanContext::CreateSwapChain()
 {
     SwapChainSupportDetails swapChainSupportDetails = QuerySwapChainSupport(physicalDevice, surface);
 
-    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+    //const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+    imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+
+    swapChainExtent = swapChainSupportDetails.capabilities.currentExtent;
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -459,8 +463,8 @@ bool VulkanContext::CreateSwapChain()
         .imageFormat = imageFormat,
         .imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
         .imageExtent{
-            .width = swapChainSupportDetails.capabilities.currentExtent.width,
-            .height = swapChainSupportDetails.capabilities.currentExtent.height
+            .width = swapChainExtent.width,
+            .height = swapChainExtent.height
         },
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -475,8 +479,6 @@ bool VulkanContext::CreateSwapChain()
         return false;
     }
 
-    imageFormat = imageFormat;
-    swapChainExtent = swapChainSupportDetails.capabilities.currentExtent;
 
     uint32 imageCount = 0;
 
@@ -484,6 +486,43 @@ bool VulkanContext::CreateSwapChain()
     swapChainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(logicalDevice, swapChain, &imageCount, swapChainImages.data());
 
+    //TODO: check if its created
+    std::vector<VkFormat> depthFormatList{ VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+    for (VkFormat& format : depthFormatList) {
+        VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
+        vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, &formatProperties);
+        if (formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            depthFormat = format;
+            break;
+        }
+    }
+
+    VkImageCreateInfo depthImageCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = depthFormat,
+        .extent{.width = swapChainExtent.width, .height = swapChainExtent.height, .depth = 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VmaAllocationCreateInfo allocationCreateInfo{
+        .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+
+    vmaCreateImage(
+        allocator,
+        &depthImageCreateInfo,
+        &allocationCreateInfo,
+        &depthImage,
+        &depthImageAllocation,
+        nullptr
+    );
 
     return true;
 }
@@ -521,6 +560,17 @@ bool VulkanContext::CreateImageViews()
             break;
         }
     }
+
+    VkImageViewCreateInfo depthViewCreateInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = depthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = depthFormat,
+        .subresourceRange{ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1 }
+    };
+
+    //TODO: check if its created
+    vkCreateImageView(logicalDevice, &depthViewCreateInfo, nullptr, &depthImageView);
 
     return imageViewsInitialized;
 }

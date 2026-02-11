@@ -12,13 +12,14 @@
 class VulkanGraphicsPipeline
 {
 public:
-    static VkPipeline CreatePipeline(GraphicsPipelineDesc desc) ;
+    VkPipeline CreatePipeline(GraphicsPipelineDesc desc, VkDevice device);
     void DestroyPipeline() ;
     void BindPipeline() ;
 
 
 private:
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline pipeline = VK_NULL_HANDLE;
 };
 
 
