@@ -269,7 +269,7 @@ uint32 VulkanContext::CreateGraphicsPipeline(const GraphicsPipelineDesc& desc)
     pipeline.CreatePipeline(desc, logicalDevice);
 
     pipelineStorage.push_back(pipeline);
-    uint32 index = pipelineStorage.size();
+    size_t index = pipelineStorage.size();
 
     pipelineCache[hash] = index;
 

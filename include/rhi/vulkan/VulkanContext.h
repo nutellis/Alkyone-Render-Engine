@@ -8,7 +8,7 @@
 
 #include <rhi/IGraphicsContext.h>
 
-#include <volk/volk.h>
+#include <volk.h>
 #include <vk_mem_alloc.h>
 
 #include <vector>
@@ -74,7 +74,7 @@ class VulkanContext: public IGraphicsContext
     GLFWwindow * window = nullptr;
 
     std::vector<VulkanGraphicsPipeline> pipelineStorage;
-    std::unordered_map<size_t, uint32> pipelineCache;
+    std::unordered_map<size_t, size_t> pipelineCache;
 
 public:
 
