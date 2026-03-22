@@ -6,12 +6,22 @@
 
 #include <rendering/MeshLodGroup.h>
 
+#include "rendering/Mesh.h"
+
 MeshGroup::MeshGroup()
 {
-    meshLodGroups = TArray<Mesh*>();
+    meshLodGroups = DArray<Mesh*>();
 }
 
 MeshGroup::~MeshGroup()
 {
 
+}
+
+void MeshGroup::Terminate()
+{
+    for (Mesh* mesh : meshLodGroups)
+    {
+        mesh->Terminate();
+    }
 }

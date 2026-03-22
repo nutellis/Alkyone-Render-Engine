@@ -6,7 +6,7 @@
 #include <array>
 #include <shaders/ShaderManager.h>
 
-#include "rhi/IGraphicsContext.h"
+#include "rhi/core/DynamicRHI.h"
 #include "spdlog/spdlog.h"
 
 bool ShaderManager::Initialize(const ContextSlangTargetOptions& slangInitOptions)

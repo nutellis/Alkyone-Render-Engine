@@ -4,7 +4,7 @@
 
 #ifndef ALKYONERENDERENGINE_MESHLODGROUP_H
 #define ALKYONERENDERENGINE_MESHLODGROUP_H
-#include "containers/Array.h"
+#include "containers/DArray.h"
 
 
 class Mesh;
@@ -12,7 +12,7 @@ class Mesh;
 class MeshLodGroup
 {
     // the actual LODs of the mesh. Zero is the default.
-    TArray<Mesh> meshLods;
+    DArray<Mesh> meshLods;
 };
 
 

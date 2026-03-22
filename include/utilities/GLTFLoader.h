@@ -32,15 +32,15 @@ class GLTFLoader
 
     std::string err;
     std::string warn;
-    std::string filename = "../assets/box/vertexcolours/BoxVertexColors.glb";
+    std::string filename = "../assets/box/vertexcolours/BoxVertexColors.gltf";
 
     tinygltf::Model model {};
 
 public:
     bool Load();
     bool PopulateMeshGroup(MeshGroup& meshgroup);
-    void GetVertices(const tinygltf::Primitive& primitive, TArray<Vertex>& vertices);
-    void GetIndices(const tinygltf::Primitive& primitive, uint32 padding, TArray<uint32>& indices);
+    void GetVertices(const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices);
+    void GetIndices(const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices);
     void dbgModel();
 };
 

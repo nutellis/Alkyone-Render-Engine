@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-	<Type Name="TArray&lt;*&gt;">
-		<DisplayString>{{Size={ArraySize}, Capacity={StorageSize}}}</DisplayString>
+	<Type Name="DArray&lt;*&gt;">
+		<DisplayString>{{Size={Last-First}, Capacity={Storage-First}}}</DisplayString>
 		<Expand>
 			<Item Name="[Size]">ArraySize</Item>
 			<Item Name="[Capacity]">StorageSize</Item>

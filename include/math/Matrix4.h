@@ -16,11 +16,11 @@
 
 
 
-#include <GenericMath.h>
+#include <math/GenericMath.h>
 
-#include <SSEMath.h>
+#include <math/SSEMath.h>
 
-#include <Types.h>
+#include <math/Types.h>
 
 //Matrix4 struct 4x4 Matrix
 template <typename T>
@@ -92,6 +92,6 @@ public:
 };
 #pragma pack(pop) 
 
-#include <../../Source/Matrix4.inl>
+#include <math/Matrix4.inl>
 
 #endif //!MATRIX4_H

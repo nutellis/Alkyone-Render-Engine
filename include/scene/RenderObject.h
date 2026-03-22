@@ -7,6 +7,7 @@
 #include <string>
 
 #include "containers/SlotMap.h"
+#include "math/Matrix4.h"
 
 class MeshGroup;
 
@@ -26,12 +27,14 @@ struct RenderObject
 {
     using RenderObjectId = SlotMap<RenderObject>::ElementId;
 
-    // glm::mat4x3 transform = {};
+    Matrix4f transform = {};
     // glm::mat4x3 combined_transform = {};
-    // std::optional<RenderEntityId> first_child = {};
+    RenderObjectId firstChild = {};
     RenderObjectId nextSibling = {};
     RenderObjectId parent = {};
-    // uint32 mesh_group_index = {};
+
+    uint32 mesh_group_index = {};
+
     ObjectType type = ObjectType::UNKNOWN;
     std::string name = {};
     // std::optional<u32> light_index = {};

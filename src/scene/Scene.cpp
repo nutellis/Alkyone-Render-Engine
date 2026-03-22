@@ -3,3 +3,8 @@
 //
 
 #include <scene/Scene.h>
+
+void Scene::AddMesh(Mesh& mesh)
+{
+    meshObjects.createSlot(mesh);
+}

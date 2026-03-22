@@ -41,5 +41,5 @@ Vertex& Vertex::operator=(Vertex&& Other) noexcept
 
 bool Vertex::operator==(const Vertex& other) const
 {
-    return position == other.position && normal == other.normal && uvs == other.uvs /*&& Color == other.Color  && Binormal == other.Binormal && Tangent == other.Tangent*/;
+    return position == other.position && normal == other.normal && uvs == other.uvs && color == other.color /* && Binormal == other.Binormal && Tangent == other.Tangent*/;
 }

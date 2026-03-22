@@ -61,17 +61,35 @@ find_library(Slang_LIBRARY NAMES slang slang-compiler HINTS "$ENV{VULKAN_SDK}/li
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 add_executable(AlkyoneRenderer main.cpp ${SRC_FILES}
-        src/scene/Scene.cpp
-        include/scene/Scene.h
-        include/containers/SlotMap.h
-        include/shaders/ShaderManager.cpp
-        include/shaders/ShaderManager.h
-        include/utilities/FileUtilities.h
-        include/rhi/GraphicsPipelineDesc.h
-        include/rhi/IGraphicsPipeline.h
-        src/rhi/vulkan/VulkanGraphicsPipeline.cpp
-        include/rhi/vulkan/VulkanGraphicsPipeline.h
-        include/rhi/vulkan/VulkanDefinitions.h)
+        include/core/CoreDefinitions.h
+        src/rhi/vulkan/VulkanQueue.cpp
+        include/rhi/vulkan/VulkanQueue.h
+        include/rhi/core/IDevice.h
+        src/rhi/vulkan/VulkanDevice.cpp
+        include/rhi/vulkan/VulkanDevice.h
+        include/rhi/core/ISwapchain.h
+        src/rhi/vulkan/VulkanSwapchain.cpp
+        include/rhi/vulkan/VulkanSwapchain.h
+        include/rhi/core/ISurface.h
+        src/rhi/vulkan/VulkanSurface.cpp
+        include/rhi/vulkan/VulkanSurface.h
+        src/rhi/vulkan/VulkanCommandBuffer.cpp
+        include/rhi/vulkan/VulkanCommandBuffer.h
+        include/rhi/core/barriers/ImageBarrier.h
+        include/rhi/core/IFrameSync.h
+        src/rhi/vulkan/VulkanFrameSync.cpp
+        include/rhi/vulkan/VulkanFrameSync.h
+        include/rhi/core/ITexture.h
+        src/rhi/vulkan/VulkanImage.cpp
+        include/rhi/vulkan/VulkanImage.h
+        include/rhi/core/RHIDefinitions.h
+        include/rhi/core/IBuffer.h
+        src/rhi/vulkan/VulkanBuffer.cpp
+        include/rhi/vulkan/VulkanBuffer.h
+        include/rhi/descriptors/BufferDesc.h
+        include/utilities/TypeUtilities.h
+        include/rendering/view/Camera.cpp
+        include/rendering/view/Camera.h)
 
 target_compile_options(AlkyoneRenderer
         PRIVATE

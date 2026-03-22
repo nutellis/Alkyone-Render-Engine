@@ -5,15 +5,30 @@
 #ifndef ALKYONERENDERENGINE_WINDOW_H
 #define ALKYONERENDERENGINE_WINDOW_H
 
+#define RHI_VULKAN_ENABLED 1
+
+#ifdef RHI_D3D12_ENABLED
+    #include <windef.h>
+#endif
+
+#ifdef RHI_VULKAN_ENABLED
+    #include <volk.h>
+#endif
+
+#include "GLFW/glfw3.h"
+
+
+
 #include "PODTypes.h"
 #include <string>
+#include <vector>
 
-#include "rhi/IGraphicsContext.h"
-#include "GLFW/glfw3.h"
+#include "../rhi/core/DynamicRHI.h"
+
 
 struct GLFWwindow;
 struct GLFWmonitor;
-class IGraphicsContext;
+class DynamicRHI;
 
 struct WindowFlags
 {
@@ -35,12 +50,12 @@ public:
     GLFWwindow * windowHandle;
     GLFWmonitor * monitorHandle;
 
-    IGraphicsContext* contextHandle;
-
     uint32 width, height;
     size_t frameCount;
     WindowFlags windowFlags;
 
+
+    bool framebufferResized;
 
 public:
     // rule of 5
@@ -51,13 +66,21 @@ public:
     bool Initialize();
     void Terminate() const;
     bool CreateWindow(const std::string& windowName, uint32 inWidth, uint32 inHeight, bool bisFullScreen);
-    bool InitializeContext();
     void ResizeWindow(int width, int height);
 
     // Callbacks
     static void OnCloseCallback(GLFWwindow* window);
     static void ErrorCallback(int ErrorCode, const char* Description);
     static void OnResizeCallback(GLFWwindow* window, int width, int height);
+
+#ifdef RHI_VULKAN_ENABLED
+    std::vector<const char*> GetVulkanRequiredExtensions();
+    bool CreateVulkanSurface(const VkInstance & instance, VkSurfaceKHR* surface);
+#endif
+
+#ifdef RHI_D3D12_ENABLED
+    HWND getWin32Handle() const = 0;
+#endif
 };
 
 

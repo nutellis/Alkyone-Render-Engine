@@ -6,15 +6,27 @@
 
 #include "rendering/types/Vertex.h"
 
-#include "rhi/GraphicsPipelineDesc.h"
+#include "rhi/descriptors/GraphicsPipelineDesc.h"
 
 #include <rhi/vulkan/VulkanDefinitions.h>
 
 #include "volk.h"
+#include "rhi/vulkan/VulkanDevice.h"
 #include "spdlog/spdlog.h"
 
-VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkDevice device)
+
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(VulkanDevice& device) : device(device)
 {
+}
+
+VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
+{
+}
+
+
+bool VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc)
+{
+    //Maybe move this to an Abstracted RHI function ?
     // vertices
     VkVertexInputBindingDescription vertexBinding{
         .binding = 0,
@@ -22,10 +34,12 @@ VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkD
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
    };
 
+    //TODO: add this on the pipeline desc
     std::vector<VkVertexInputAttributeDescription> vertexAttributes{
         { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
         { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, normal) },
         { .location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Vertex, uvs) },
+        { .location = 3, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, color) },
     };
 
     VkPipelineVertexInputStateCreateInfo vertexInputState{
@@ -33,7 +47,7 @@ VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkD
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &vertexBinding,
         .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size()),
-        .pVertexAttributeDescriptions = vertexAttributes.data(),
+        .pVertexAttributeDescriptions = vertexAttributes.data()
     };
 
     //topology
@@ -44,13 +58,13 @@ VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkD
 
     //TODO: MOVE THIS FROM HERE
     Slang::ComPtr<ISlangBlob> spirvVertex;
-   // desc.vertexShaderModule->getTargetCode(0, spirvVertex.writeRef());
+    desc.shaderModule->getTargetCode(0, spirvVertex.writeRef());
 
-    SlangResult result = desc.vertexShaderModule->getTargetCode(0, spirvVertex.writeRef());
+    SlangResult result = desc.shaderModule->getTargetCode(0, spirvVertex.writeRef());
     if (SLANG_FAILED(result) || !spirvVertex)
     {
         spdlog::error("Failed to get SPIR-V code from vertex shader!");
-        return VK_NULL_HANDLE;
+        return false;
     }
 
     VkShaderModuleCreateInfo vertexModuleCreateInfo{
@@ -61,17 +75,17 @@ VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkD
 
     VkShaderModule vertexModule{};
     //TODO: add checks
-    vkCreateShaderModule(device, &vertexModuleCreateInfo, nullptr, &vertexModule);
+    vkCreateShaderModule(device.GetLogicalDevice(), &vertexModuleCreateInfo, nullptr, &vertexModule);
     //TODO: MOVE THIS FROM HERE
     Slang::ComPtr<ISlangBlob> spirvFrag;
-    desc.fragmentShaderModule->getTargetCode(0, spirvFrag.writeRef());
+    desc.shaderModule->getTargetCode(0, spirvFrag.writeRef());
     VkShaderModuleCreateInfo fragModuleCreateInfo{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .codeSize = spirvFrag->getBufferSize(),
         .pCode = static_cast<const uint32_t*>(spirvFrag->getBufferPointer())
     };
     VkShaderModule fragModule{};
-    vkCreateShaderModule(device, &fragModuleCreateInfo, nullptr, &fragModule);
+    vkCreateShaderModule(device.GetLogicalDevice(), &fragModuleCreateInfo, nullptr, &fragModule);
 
     //shaders
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages{
@@ -168,7 +182,7 @@ VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkD
         .pPushConstantRanges = &pushConstantRange
     };
 
-    vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
+    vkCreatePipelineLayout(device.GetLogicalDevice(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
 
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo{
@@ -193,12 +207,40 @@ VkPipeline VulkanGraphicsPipeline::CreatePipeline(GraphicsPipelineDesc desc, VkD
     pipelineCreateInfo.basePipelineIndex = -1;
 
 
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(device.GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS)
     {
         // pipeline failed to init
-        return nullptr;
+        return false;
     }
 
-    return pipeline;
+    vkDestroyShaderModule(device.GetLogicalDevice(), vertexModule, nullptr);
+    vkDestroyShaderModule(device.GetLogicalDevice(), fragModule, nullptr);
 
+
+    return true;
+
+}
+
+void VulkanGraphicsPipeline::DestroyPipeline()
+{
+        if (pipeline != VK_NULL_HANDLE)
+        {
+            vkDestroyPipeline(device.GetLogicalDevice(), pipeline, nullptr);
+            pipeline = VK_NULL_HANDLE;
+        }
+
+        if (pipelineLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyPipelineLayout(device.GetLogicalDevice(), pipelineLayout, nullptr);
+            pipelineLayout = VK_NULL_HANDLE;
+        }
+}
+
+void VulkanGraphicsPipeline::BindPipeline()
+{
+}
+
+VkPipeline VulkanGraphicsPipeline::GetVkPipeline() const
+{
+    return pipeline;
 }

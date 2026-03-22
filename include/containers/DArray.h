@@ -10,7 +10,7 @@
 #include <cstring>
 
 template <typename T> //, typename Allocator = DefaultAllocator>
-class TArray
+class DArray
 {
 public:
 	//The type of the container's elements.
@@ -34,15 +34,13 @@ public:
 
 public:
 
-	explicit TArray() = default;
+	explicit DArray() = default;
 
 	//TODO: Should this arraySize be zero ????
-	TArray(const SizeType Count) :
+	DArray(const SizeType Count) :
 		First(static_cast<T*>(::operator new(Count * sizeof(T)))),
 		Last(First),
-		Storage(First + Count),
-		ArraySize(0),
-		StorageSize(Count) {
+		Storage(First + Count){
 
 		if constexpr (std::is_trivially_constructible_v<T>) {
 			memset(First, 0, Count * sizeof(T));
@@ -54,12 +52,10 @@ public:
 	}
 
 	//initialized array with Value
-	TArray(const SizeType Count, ValueType Value) :
+	DArray(const SizeType Count, ValueType Value) :
 		First(static_cast<T*>(::operator new(Count * sizeof(T)))),
 		Last(First + Count),
-		Storage(Last),
-		ArraySize(Count),
-		StorageSize(Count) {
+		Storage(Last) {
 		if (BuySpace(Count)) {
 			this->Last = Fill(this->First, Count, Value);
 			// Tidy(); 
@@ -67,59 +63,53 @@ public:
 	}
 
 	// Copy Constructor
-	TArray(const TArray& Other) {
+	DArray(const DArray& Other) {
 		CopyToEmpty(Other.First, Other.Size());
 	}
 
 	// TODO: might not be the safest approach
 	// Copy Assignment operator
-	TArray& operator =(const TArray& Other) {
+	DArray& operator =(const DArray& Other) {
 		if (this != &Other) {
 			CopyToEmpty(Other.First, Other.Size());
 		}
 		return *this;
 	}
 
-	TArray(TArray&& Other) noexcept :
+	DArray(DArray&& Other) noexcept :
 	First(Other.First),
 	Last(Other.Last),
-	Storage(Other.Storage),
-	ArraySize(Other.ArraySize),
-	StorageSize(Other.StorageSize)
+	Storage(Other.Storage)
 	{
 		Other.First = nullptr;
 		Other.Last = nullptr;
 		Other.Storage = nullptr;
-		Other.ArraySize = 0;
-		Other.StorageSize = 0;
 	}
 
 	//TODO: maybe can be safer
 	void CopyToEmpty(const Pointer Other, int64 OtherSize) {
-		if (OtherSize || StorageSize)
+		if (OtherSize || Capacity())
 		{
-			ResizeForCopy(OtherSize, StorageSize);
+			ResizeForCopy(OtherSize, Capacity());
 			ConstructItems(First, Other, OtherSize);
 		}
 		else
 		{
-			StorageSize = 0;
+			Storage = First;
 		}
 	}
 
 
 	void ConstructItems(void* Dest, const ValueType* Source, int64 Count)
 	{
-		ArraySize = Count;
-
 		while (Count) {
 			new (Dest) ValueType(*Source);
 			++(ValueType*&)Dest;
 			++Source;
 			--Count;
 		}
-		Last = First + ArraySize;
-		Storage = First + StorageSize;
+		Last = First + Size();
+		Storage = First + Capacity();
 
 	}
 
@@ -130,7 +120,7 @@ public:
 		EndOfArray = First + ArrayMax;
 	}*/
 
-	constexpr bool operator ==(TArray& Other) const {
+	constexpr bool operator ==(DArray& Other) const {
 		if (this->Size() != Other.Size()) {
 			return false;
 		}
@@ -142,26 +132,25 @@ public:
 		return true;
 	}
 
-	TArray& operator=(TArray&& Other) noexcept {
+	DArray& operator=(DArray&& Other) noexcept {
 		if (this != &Other) {
 			Free();
 
 			First = Other.First;
 			Last = Other.Last;
 			Storage = Other.Storage;
-			ArraySize = Other.ArraySize;
-			StorageSize = Other.StorageSize;
+
 
 			Other.First = nullptr;
 			Other.Last = nullptr;
 			Other.Storage = nullptr;
-			Other.ArraySize = 0;
-			Other.StorageSize = 0;
+
 		}
 		return *this;
 	}
 
-	TArray& operator=(std::initializer_list<T> InitList) {
+	//TODO: check for bugs
+	DArray& operator=(std::initializer_list<T> InitList) {
 			SizeType ListSize = InitList.size();
 
 			Clear();
@@ -171,7 +160,7 @@ public:
 				return *this;
 			} 
 			
-			if (ListSize > StorageSize) {
+			if (ListSize > Capacity()) {
 				// Not enough capacity, free and allocate new memory
 				Free();
 				BuySpace(ListSize);
@@ -180,17 +169,16 @@ public:
 			for (const auto& Element : InitList) {
 				new (Dest++) T(Element);
 			}
-			ArraySize = ListSize;
-			Last = First + ArraySize;
-			Storage = First + StorageSize;
+			Last = First + ListSize;
+			Storage = First + Capacity();
 			return *this;
 	}
 
-	constexpr bool operator!=(const TArray& Other) const {
+	constexpr bool operator!=(const DArray& Other) const {
 		return !(*this == Other);
 	}
 
-	~TArray() noexcept{
+	~DArray() noexcept{
 		if constexpr (!std::is_trivially_destructible_v<T>)
 		{
 			Pointer Delete = First;
@@ -211,12 +199,12 @@ public:
 
 
 	Reference At(SizeType Index) {
-		assert(Index < ArraySize);
+		assert(Index < Size());
 		return this->First[Index];
 	}
 
 	ConstReference At(SizeType Index) const {
-		assert(Index < ArraySize);
+		assert(Index < Size());
 		return this->First[Index];
 	}
 
@@ -294,9 +282,7 @@ public:
 
 			//Create a new value @ Last
 			::new (static_cast<void *>(Last)) ValueType(std::forward<Types>(Values)...);
-
 			++Last;
-			++ArraySize;
 
 		}
 		else {
@@ -358,16 +344,13 @@ public:
 		else {
 			First = Last = Storage = nullptr;
 		}
-		StorageSize = NewMax;
-		ArraySize = 0;
 	}
 
 	void PopBack()
 	{
-		if (ArraySize > 0)
+		if (Size() > 0)
 		{
 			--Last;
-			--ArraySize;
 
 			if constexpr (!std::is_trivially_destructible_v<ValueType>)
 			{
@@ -383,8 +366,6 @@ public:
 			Last--;
 			Last->~T();
 		}
-
-		ArraySize = 0;
 	}
 
 	//returns Value, or nullptr
@@ -395,7 +376,7 @@ public:
 		while (Result != Last)
 		{
 			if (predicate(*Result)) {
-				return *Result;
+				return Result;
 			}
 			++Result;
 		}
@@ -403,8 +384,8 @@ public:
 	}
 
 	template <typename Predicate>
-	TArray<T> FindAll(Predicate predicate) {
-		TArray<T> Matches;
+	DArray<T> FindAll(Predicate predicate) {
+		DArray<T> Matches;
 		Pointer Result = First;
 
 		while (Result != Last) {
@@ -416,7 +397,7 @@ public:
 		return Matches;
 	}
 
-	void Move(TArray<T>&& OtherData) {
+	void Move(DArray<T>&& OtherData) {
 		Clear();
 		*this = std::move(OtherData);
 	}
@@ -479,8 +460,6 @@ private:
 		First = static_cast <ValueType *> (::operator new(NewCapacity * sizeof(ValueType))); // TODO:
 		Last = First; // TODO: don't really like this here. Possible bug!
 		Storage = First + NewCapacity;
-		StorageSize = NewCapacity;
-		ArraySize = 0;
 
 		return true;
 	}
@@ -512,9 +491,6 @@ private:
 
 		Storage = First + NewCapacity;
 
-		ArraySize = NewSize;
-
-		StorageSize = NewCapacity;
 	}
 
 	void Free() {
@@ -528,10 +504,6 @@ private:
 
 	
 private:
-
-	SizeType ArraySize {};
-
-	SizeType StorageSize {};
 
 	//i need a pointer to the first item
 	ValueType *First {};

@@ -85,9 +85,9 @@ struct GraphicsPipelineDesc
 {
     //shaders of type Slang::ComPtr<slang::IModule>. For starters, we support separate files for each shader to avoid complexity
     // vertex
-    Slang::ComPtr<slang::IModule> vertexShaderModule;
+    Slang::ComPtr<slang::IModule> shaderModule;
     // fragment/pixel
-    Slang::ComPtr<slang::IModule> fragmentShaderModule;
+    //Slang::ComPtr<slang::IModule> fragmentShaderModule;
     //tessellation related (hull domain)
     //geometry
 

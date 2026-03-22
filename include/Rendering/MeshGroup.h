@@ -5,7 +5,7 @@
 #ifndef ALKYONERENDERENGINE_MESHGROUP_H
 #define ALKYONERENDERENGINE_MESHGROUP_H
 
-#include "containers/Array.h"
+#include "containers/DArray.h"
 
 
 class MeshLodGroup;
@@ -15,12 +15,14 @@ class MeshGroup
 {
     // a collection of all the meshes (and their LODs) that make up the object.
 public:
-    TArray<Mesh *> meshLodGroups;
+    DArray<Mesh *> meshLodGroups;
 
 public:
     MeshGroup();
     ~MeshGroup();
 
+    bool Initialize();
+    void Terminate();
 };
 
 

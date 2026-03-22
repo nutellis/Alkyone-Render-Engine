@@ -4,7 +4,7 @@
 
 #ifndef ALKYONERENDERENGINE_IPIPELINE_H
 #define ALKYONERENDERENGINE_IPIPELINE_H
-#include "GraphicsPipelineDesc.h"
+#include "../descriptors/GraphicsPipelineDesc.h"
 
 
 class IGraphicsPipeline
@@ -13,7 +13,7 @@ public:
     IGraphicsPipeline() = default;
     virtual ~IGraphicsPipeline() = default;
 
-    virtual void CreatePipeline(GraphicsPipelineDesc desc)= 0;
+    virtual bool CreatePipeline(GraphicsPipelineDesc desc) = 0;
     virtual void DestroyPipeline()= 0;
 
     virtual void BindPipeline() = 0;

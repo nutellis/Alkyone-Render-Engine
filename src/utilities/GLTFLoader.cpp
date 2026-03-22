@@ -17,11 +17,13 @@
 
 #include "rendering/Mesh.h"
 #include "rendering/MeshGroup.h"
+#include "rhi/core/IBuffer.h"
 
 bool GLTFLoader::Load()
 {
     tinygltf::Model modelTemp {};
     bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename.c_str());
+    //bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename.c_str());
     spdlog::error(ret);
     //
     if (!warn.empty()) {
@@ -49,8 +51,8 @@ bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
     size_t indexCount = 0;
     size_t vertexStart = 0;
 
-    TArray<uint32> indices {};
-    TArray<Vertex> vertices {};
+    std::vector<uint32> indices {};
+    std::vector<Vertex> vertices {};
 
 
     //equivalents:
@@ -63,11 +65,11 @@ bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
         //create a new Mesh
         Mesh * meshPrimitive = new Mesh();
 
-        vertexStart = vertices.Size();
+        vertexStart = vertices.size();
 
         GetVertices(primitive, vertices);
         // here we say: if the last primitive had X indices, the next one will be saved on size + 1.
-        primitiveStartIndex = indices.Size();
+        primitiveStartIndex = indices.size();
 
 
         indexCount += model.accessors[primitive.indices].count;
@@ -79,6 +81,7 @@ bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
         meshPrimitive->vertices = vertices;
         meshPrimitive->indices = indices;
 
+
         meshgroup.meshLodGroups.PushBack(meshPrimitive);
     }
 
@@ -86,7 +89,7 @@ bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
 }
 
 
-void GLTFLoader::GetVertices(const tinygltf::Primitive& primitive, TArray<Vertex>& vertices)
+void GLTFLoader::GetVertices(const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices)
 {
     //vertices
     const float* positionBuffer = nullptr;
@@ -163,13 +166,13 @@ void GLTFLoader::GetVertices(const tinygltf::Primitive& primitive, TArray<Vertex
                 vertex.color = Vector3f(1.0f);
             }
 
-            vertices.PushBack(vertex);
+            vertices.push_back(vertex);
 
         }
 }
 
 
-void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding, TArray<uint32>& indices) {
+void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices) {
     //indices
     const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
     const tinygltf::BufferView& bufferView = model.bufferViews[indexAccessor.bufferView];
@@ -186,7 +189,7 @@ void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding
             const uint32* buf = reinterpret_cast<const uint32*>(&buffer.data[bufferView.byteOffset + indexAccessor.byteOffset]);
             for (size_t i = 0; i < indexAccessor.count; i++)
             {
-                indices.PushBack(buf[i] + padding);
+                indices.push_back(buf[i] + padding);
             }
             break;
         }
@@ -195,7 +198,7 @@ void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding
             const uint16* buf = reinterpret_cast<const uint16*>(&buffer.data[bufferView.byteOffset + indexAccessor.byteOffset]);
             for (size_t i = 0; i < indexAccessor.count; i++)
             {
-                indices.PushBack(buf[i] + padding);
+                indices.push_back(buf[i] + padding);
             }
             break;
         }
@@ -203,7 +206,7 @@ void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding
         {
             const uint8 * buf = reinterpret_cast<const uint8*>(&buffer.data[bufferView.byteOffset + indexAccessor.byteOffset]);
             for (size_t i = 0; i < indexAccessor.count; i++) {
-                indices.PushBack(buf[i] + padding);
+                indices.push_back(buf[i] + padding);
 
             }
             break;

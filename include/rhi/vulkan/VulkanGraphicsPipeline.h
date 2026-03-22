@@ -4,22 +4,31 @@
 
 #ifndef ALKYONERENDERENGINE_VULKANGRAPHICSPIPELINE_H
 #define ALKYONERENDERENGINE_VULKANGRAPHICSPIPELINE_H
-#include <vulkan/vulkan_core.h>
+#include <volk.h>
 
-#include "rhi/IGraphicsPipeline.h"
+#include <rhi/core/IGraphicsPipeline.h>
 
 
-class VulkanGraphicsPipeline
+class VulkanDevice;
+
+class VulkanGraphicsPipeline: IGraphicsPipeline
 {
 public:
-    VkPipeline CreatePipeline(GraphicsPipelineDesc desc, VkDevice device);
-    void DestroyPipeline() ;
+    VulkanGraphicsPipeline(VulkanDevice& device);
+    ~VulkanGraphicsPipeline() override;
+
+    bool CreatePipeline(GraphicsPipelineDesc desc) override;
+    void DestroyPipeline() override;
     void BindPipeline() ;
+
+    VkPipeline GetVkPipeline() const;
 
 
 private:
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
+
+    VulkanDevice & device;
 };
 
 

@@ -8,17 +8,27 @@
 #include <GLFW/glfw3.h>
 
 #include "rendering/Mesh.h"
-#include "rhi/GraphicsPipelineDesc.h"
+#include <rhi/descriptors/CommandPoolDesc.h>
+#include <rhi/descriptors/GraphicsPipelineDesc.h>
+
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "rhi/core/IFrameSync.h"
+#include "rhi/core/barriers/ImageBarrier.h"
 #include "spdlog/spdlog.h"
 #include "utilities/GLTFLoader.h"
 
-AlkyoneRenderEngine::AlkyoneRenderEngine() : window(nullptr)
+#include <utilities/TypeUtilities.h>
+
+AlkyoneRenderEngine::AlkyoneRenderEngine(): window(nullptr), rhi(nullptr), shaderManager(nullptr)
 {
 }
 
 AlkyoneRenderEngine::~AlkyoneRenderEngine()
 {
     delete window;
+    delete rhi;
+    delete shaderManager;
 }
 
 bool AlkyoneRenderEngine::Initialize()
@@ -39,20 +49,21 @@ bool AlkyoneRenderEngine::Initialize()
     window = new ARWindow();
     window->Initialize();
 
-    shaderManager = new ShaderManager();
+    //TODO: hardcoded VULKAN for now
+    rhi = DynamicRHI::CreateContext(window, RendererBackend::Vulkan);
 
-    //TODO: a getter would be nice
-    shaderManager->Initialize(window->contextHandle->slangTargetOptions);
+    shaderManager = new ShaderManager();
+    shaderManager->Initialize(rhi->GetSlangTargetOptions());
 
     return true;
 }
 
 void AlkyoneRenderEngine::Terminate()
 {
+    rhi->Terminate();
     window->Terminate();
     glfwTerminate();
 }
-
 void AlkyoneRenderEngine::Run()
 {
     //test GLFT loader
@@ -60,24 +71,9 @@ void AlkyoneRenderEngine::Run()
     //RenderObject * object = new RenderObject();
 
     Slang::ComPtr<slang::IModule> slangModule{ shaderManager->slangSession->loadModuleFromSource("triangle", "../shaders/triangle.slang", nullptr, nullptr) };
-    Slang::ComPtr<ISlangBlob> spirv;
-    slangModule->getTargetCode(0, spirv.writeRef());
 
-    //create a pipeline
-    // Slang::ComPtr<slang::IBlob> diagnostics;
-    //
-    // Slang::ComPtr<slang::IModule> slangModule{
-    //     shaderManager->slangSession->loadModule("triangle", diagnostics.writeRef())
-    // };
-    //
-    // if (!slangModule)
-    // {
-    //     if (diagnostics)
-    //         std::cerr << (const char*)diagnostics->getBufferPointer() << std::endl;
-    // }
-    GraphicsPipelineDesc desc;
-    desc.vertexShaderModule = slangModule;
-    desc.fragmentShaderModule = slangModule;
+    GraphicsPipelineDesc desc {};
+    desc.shaderModule = slangModule;
     desc.viewportCount = 1;
     desc.scissorCount = 1;
     desc.depthTestEnable = false;
@@ -89,7 +85,7 @@ void AlkyoneRenderEngine::Run()
     desc.cullMode = CULL_MODE_NONE;
     desc.frontFace = FRONT_FACE_CLOCKWISE;
 
-    window->contextHandle->CreateGraphicsPipeline(desc);
+    rhi->CreatePipeline(desc);
 
 
     MeshGroup* meshgroup = new MeshGroup();
@@ -101,5 +97,65 @@ void AlkyoneRenderEngine::Run()
 
     while (!glfwWindowShouldClose(window->windowHandle)) {
         glfwPollEvents();
+
+        if (rhi->BeginFrame() == false)
+        {
+            spdlog::error("Skipping Frame");
+            continue;
+        }
+
+        rhi->TransitionBarrier(ImageBarrier{
+            .sourceStageMask = StageFlagBits::STAGE_COLOUR_ATTACHMENT_OUTPUT,
+            .sourceAccessMask = AccessMaskFlagBits::ACCESS_NONE,
+            .destStageMask = StageFlagBits::STAGE_COLOUR_ATTACHMENT_OUTPUT,
+            .destAccessMask = AccessMaskFlagBits::ACCESS_COLOUR_ATTACHMENT_WRITE,
+            .sourceState = STATE_UNDEFINED,
+            .destState = STATE_COLOUR_ATTACHMENT,
+            .aspectMask = ImageAspectFlagBits::ASPECT_COLOUR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        });
+        //rhi->ClearColour(Vector3f(0.5f,0.5f,0.1f));
+
+        //setup the rendering info
+
+        rhi->BeginRendering();
+        //rendering commands here
+
+        //for each mesh in the scene (we only have 1 for now)
+
+
+        rhi->BindPipeline(0);
+
+        rhi->PrepareVertexBuffer(*meshgroup->meshLodGroups[0]);
+
+
+        //rhi->SetViewport(0, 0, window->GetWidth(), window->GetHeight());
+        //rhi->SetScissor(0, 0, window->GetWidth(), window->GetHeight());
+
+        rhi->Draw();
+
+        rhi->EndRendering();
+
+
+        rhi->TransitionBarrier(ImageBarrier{
+            .sourceStageMask = StageFlagBits::STAGE_ALL_COMMANDS,
+            .sourceAccessMask = AccessMaskFlagBits::ACCESS_MEMORY_WRITE,
+            .destStageMask = StageFlagBits::STAGE_ALL_COMMANDS,
+            .destAccessMask = AccessMaskFlagBits::ACCESS_MEMORY_WRITE | AccessMaskFlagBits::ACCESS_MEMORY_READ,
+            .sourceState = STATE_COLOUR_ATTACHMENT,
+            .destState = STATE_PRESENT_SRC,
+            .aspectMask = ImageAspectFlagBits::ASPECT_COLOUR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        });
+        rhi->EndFrame();
     }
+    rhi->WaitIdle();
+
+    meshgroup->Terminate();
 }

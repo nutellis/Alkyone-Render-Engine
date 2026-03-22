@@ -7,7 +7,8 @@
 
 #include "slang-com-ptr.h"
 #include "slang.h"
-#include "rhi/IGraphicsContext.h"
+
+struct ContextSlangTargetOptions;
 
 class ShaderManager
 {

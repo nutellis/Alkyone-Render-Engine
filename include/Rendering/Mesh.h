@@ -5,20 +5,31 @@
 #ifndef ALKYONERENDERENGINE_MESH_H
 #define ALKYONERENDERENGINE_MESH_H
 
-#include <containers/Array.h>
+#include <vector>
 
+#include "core/PODTypes.h"
+
+class IBuffer;
 struct Vertex;
 
 class Mesh
 {
 public:
-    TArray<Vertex> vertices;
-    TArray<unsigned int> indices;
+    Mesh();
+    ~Mesh();
+
+    bool Initialize();
+    void Terminate();
+
+public:
+    std::vector<Vertex> vertices;
+    std::vector<uint32> indices; // consider uint16
 
     size_t firstIndex;
     size_t indexCount;
     size_t materialIndex;
 
+    IBuffer * buffer;
 };
 
 

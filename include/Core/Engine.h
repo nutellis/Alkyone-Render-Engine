@@ -4,8 +4,11 @@
 
 #ifndef ALKYONERENDERENGINE_ENGINE_H
 #define ALKYONERENDERENGINE_ENGINE_H
+#include "rhi/core/DynamicRHI.h"
+
 #include "shaders/ShaderManager.h"
 
+class DynamicRHI;
 class ARWindow;
 
 class AlkyoneRenderEngine
@@ -20,6 +23,7 @@ class AlkyoneRenderEngine
 private:
     ARWindow *window;
 
+    DynamicRHI *rhi;
     ShaderManager *shaderManager;
 
 public:
@@ -30,6 +34,7 @@ public:
     void Terminate();
 
     void Run();
+
 };
 
 #endif //ALKYONERENDERENGINE_ENGINE_H

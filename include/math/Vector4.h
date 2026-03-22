@@ -2,7 +2,7 @@
 #ifndef	VECTOR4_H
 #define VECTOR4_H
 
-#include <GenericMath.h>
+#include <math/GenericMath.h>
 
 /*4 element generic Vector*/
 template <typename Type> 

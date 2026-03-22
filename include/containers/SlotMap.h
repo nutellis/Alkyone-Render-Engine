@@ -5,7 +5,9 @@
 #ifndef ALKYONERENDERENGINE_SLOTMAP_H
 #define ALKYONERENDERENGINE_SLOTMAP_H
 
-#include "Containers\Array.h"
+#include <vector>
+
+#include "Containers\DArray.h"
 
 template <typename T>
 struct SlotMap
@@ -14,17 +16,16 @@ struct SlotMap
 public:
     struct ElementId
     {
-        ElementId() : isAlive(0), generation(0), index(0)
+        ElementId() : generation(0), index(0)
         {
         }
 
-        uint32 isAlive : 1;
-        uint32 generation: 15;
+        uint32 generation: 16;
         uint32 index: 16;
 
         [[nodiscard]] uint32 ID() const
         {
-            return ( (isAlive << 31) | (generation << 16) | index );
+            return ((generation << 16) | index );
         }
     };
 
@@ -32,16 +33,14 @@ public:
     ElementId createSlot(T&& slotObject = {})
     {
         //that means that we have empty slots somewhere
-        if (freeSlotsTracker.Size() > 0)
+        if (freeSlotsTracker.size() > 0)
         {
             //get the end of the freeSlotsTracker
-            size_t const index = static_cast<uint32>(freeSlotsTracker.Back());
+            size_t const index = static_cast<uint32>(freeSlotsTracker.back());
             //remove it from the freeSlotsTracker
-            freeSlotsTracker.PopBack();
+            freeSlotsTracker.pop_back();
 
             data[index] = std::move(slotObject);
-
-            indices[index].isAlive = 1;
 
             return indices[index];
         }
@@ -64,16 +63,14 @@ public:
             size_t const index = static_cast<size_t>(id.index);
 
             //free the data at the index
-            delete data[index];
+            //delete data[index];
             data[index] = T{};
 
             indices[index].generation = (indices[index].generation + 1) & 0x7FFF;
 
-            indices[index].isAlive = 0;
-
             if (indices[static_cast<size_t>(index)] < std::numeric_limits<uint16>::max())
             {
-                freeSlotsTracker.PushBack(index);
+                freeSlotsTracker.push_back(index);
             }
             return true;
         }
@@ -84,7 +81,6 @@ public:
     {
         size_t const index = static_cast<uint32>(id.index);
         const bool validation =  index < data.Size()
-            && indices[index].isAlive
             && id.generation == indices[index].generation;
 
         return validation;
@@ -92,11 +88,11 @@ public:
     }
 
 private:
-    TArray<ElementId> indices;
-    TArray<T> data;
+    std::vector<ElementId> indices;
+    std::vector<T> data;
 
     // keeps a LIFO queue of the empty indices on data.
-    TArray<size_t> freeSlotsTracker;
+    std::vector<size_t> freeSlotsTracker;
 
 };
 
