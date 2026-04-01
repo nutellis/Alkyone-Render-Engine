@@ -29,7 +29,6 @@ public:
     size_t indexCount;
     size_t materialIndex;
 
-    IBuffer * buffer;
 };
 
 

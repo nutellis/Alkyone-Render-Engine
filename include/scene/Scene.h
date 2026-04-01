@@ -12,23 +12,21 @@
 
 class Scene
 {
+    using RenderObjectId = SlotMap<RenderObject>::ElementId;
 
     Scene() = default;
     ~Scene() = default;
-
-    void AddMesh(Mesh& mesh);
-    void RemoveMesh(Mesh& mesh);
 
     void AddRenderObject(RenderObject& object);
     void RemoveRenderObject(RenderObject& object);
 
     void Update();
+    void LoadScene(std::string filepath);
+    void LoadObject();
 
 
-    SlotMap<Mesh> meshObjects; //every new mesh is added here
     SlotMap<RenderObject> renderObjects; // every new object here
-
-    std::vector<RenderObject> rootObjects; // a list of all objects without a direct parent(on the root level)
+    std::vector<RenderObjectId> rootObjects; // a list of all objects without a direct parent(on the root level)
 
 };
 

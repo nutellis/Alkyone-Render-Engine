@@ -92,8 +92,8 @@ void AlkyoneRenderEngine::Run()
 
     auto loader = GLTFLoader();
 
-    loader.Load();
-    loader.PopulateMeshGroup(*meshgroup);
+    loader.Load(TODO, TODO);
+    loader.PopulateMeshGroup(TODO, *meshgroup);
 
     while (!glfwWindowShouldClose(window->windowHandle)) {
         glfwPollEvents();

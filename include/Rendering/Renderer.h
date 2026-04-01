@@ -4,10 +4,17 @@
 
 #ifndef ALKYONERENDERENGINE_RENDERER_H
 #define ALKYONERENDERENGINE_RENDERER_H
+#include "containers/SlotMap.h"
 
+
+class GPUMesh;
 
 class Renderer
 {
+public:
+    SlotMap<GPUMesh> meshes;
+
+    //materials - pipelines
 
 };
 

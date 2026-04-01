@@ -19,29 +19,29 @@ class MeshGroup;
 
 class GLTFLoader
 {
-    // std::unordered_map<std::string, Mesh*> meshes;
-    // std::unordered_map<std::string, Node*> nodes;
-    // //std::unordered_map<std::string, AllocatedImage> images;
-    // std::unordered_map<std::string, Material*> materials;
-    //
-    // // nodes that are top level
-    // std::vector<Node*> topLevelNodes;
-
-
-    tinygltf::TinyGLTF loader;
-
-    std::string err;
-    std::string warn;
-    std::string filename = "../assets/box/vertexcolours/BoxVertexColors.gltf";
-
-    tinygltf::Model model {};
-
 public:
-    bool Load();
-    bool PopulateMeshGroup(MeshGroup& meshgroup);
-    void GetVertices(const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices);
-    void GetIndices(const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices);
-    void dbgModel();
+    GLTFLoader() = default;
+    ~GLTFLoader() = default;
+
+    static bool Load(std::string filename, MeshGroup& meshgroup);
+
+private:
+    static bool PopulateMeshGroup(tinygltf::Model gltfModel, MeshGroup& meshgroup);
+    static void GetVertices(tinygltf::Model model, const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices);
+    static void GetIndices(tinygltf::Model model, const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices);
+    //static void dbgModel();
+
+
+
+private:
+    // tinygltf::TinyGLTF loader;
+    //
+    // std::string err;
+    // std::string warn;
+    // std::string filename = "../assets/box/vertexcolours/BoxVertexColors.gltf";
+
+   // tinygltf::Model model {};
+
 };
 
 

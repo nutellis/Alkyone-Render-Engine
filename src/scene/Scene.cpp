@@ -4,7 +4,27 @@
 
 #include <scene/Scene.h>
 
-void Scene::AddMesh(Mesh& mesh)
+#include "utilities/GLTFLoader.h"
+
+void Scene::AddRenderObject(RenderObject& object)
 {
-    meshObjects.createSlot(mesh);
+}
+
+void Scene::RemoveRenderObject(RenderObject& object)
+{
+}
+
+void Scene::Update()
+{
+}
+
+void Scene::LoadScene(const std::string filepath)
+{
+    GLTFLoader::LoadScene(filepath);
+}
+
+
+void Scene::LoadObject()
+{
+
 }

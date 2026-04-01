@@ -23,5 +23,4 @@ bool Mesh::Initialize()
 
 void Mesh::Terminate()
 {
-    buffer->Terminate();
 }

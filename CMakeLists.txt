@@ -89,7 +89,11 @@ add_executable(AlkyoneRenderer main.cpp ${SRC_FILES}
         include/rhi/descriptors/BufferDesc.h
         include/utilities/TypeUtilities.h
         include/rendering/view/Camera.cpp
-        include/rendering/view/Camera.h)
+        include/rendering/view/Camera.h
+        include/rendering/object/GPUMesh.cpp
+        include/rendering/object/GPUMesh.h
+        include/rendering/AssetRegistry.cpp
+        include/rendering/AssetRegistry.h)
 
 target_compile_options(AlkyoneRenderer
         PRIVATE

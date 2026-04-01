@@ -19,10 +19,15 @@
 #include "rendering/MeshGroup.h"
 #include "rhi/core/IBuffer.h"
 
-bool GLTFLoader::Load()
+bool GLTFLoader::Load(std::string filename, MeshGroup& meshGroup)
 {
-    tinygltf::Model modelTemp {};
-    bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename.c_str());
+    tinygltf::TinyGLTF loader {};
+    tinygltf::Model gltfModel {};
+    std::string err;
+    std::string warn;
+
+
+    bool ret = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, filename.c_str());
     //bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename.c_str());
     spdlog::error(ret);
     //
@@ -39,13 +44,18 @@ bool GLTFLoader::Load()
         printf("Failed to parse glTF: %s\n", filename.c_str());
     }
 
+
+    ret += PopulateMeshGroup(gltfModel, meshGroup);
+
     return ret;
+
+
 }
 
-bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
+bool GLTFLoader::PopulateMeshGroup(tinygltf::Model gltfModel, MeshGroup& meshgroup)
 {
     // lets work on 1 mesh for now
-    tinygltf::Mesh mesh = model.meshes[0];
+    tinygltf::Mesh mesh = gltfModel.meshes[0];
 
     size_t primitiveStartIndex = 0;
     size_t indexCount = 0;
@@ -67,14 +77,14 @@ bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
 
         vertexStart = vertices.size();
 
-        GetVertices(primitive, vertices);
+        GetVertices(gltfModel, primitive, vertices);
         // here we say: if the last primitive had X indices, the next one will be saved on size + 1.
         primitiveStartIndex = indices.size();
 
 
-        indexCount += model.accessors[primitive.indices].count;
+        indexCount += gltfModel.accessors[primitive.indices].count;
       //  indices.Resize(indexCount);
-        GetIndices(primitive,vertexStart,indices);
+        GetIndices(gltfModel, primitive,vertexStart,indices);
 
         meshPrimitive->firstIndex = primitiveStartIndex;
         meshPrimitive->indexCount = indexCount;
@@ -89,7 +99,7 @@ bool GLTFLoader::PopulateMeshGroup(MeshGroup& meshgroup)
 }
 
 
-void GLTFLoader::GetVertices(const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices)
+void GLTFLoader::GetVertices(const tinygltf::Model model, const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices)
 {
     //vertices
     const float* positionBuffer = nullptr;
@@ -172,7 +182,7 @@ void GLTFLoader::GetVertices(const tinygltf::Primitive& primitive, std::vector<V
 }
 
 
-void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices) {
+void GLTFLoader::GetIndices(const tinygltf::Model model, const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices) {
     //indices
     const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
     const tinygltf::BufferView& bufferView = model.bufferViews[indexAccessor.bufferView];
@@ -216,35 +226,35 @@ void GLTFLoader::GetIndices(const tinygltf::Primitive& primitive, uint32 padding
     }
 }
 
-void GLTFLoader::dbgModel() {
-    for (auto &mesh : model.meshes) {
-        std::cout << "mesh : " << mesh.name << std::endl;
-        for (auto &primitive : mesh.primitives) {
-            const tinygltf::Accessor &indexAccessor =
-                model.accessors[primitive.indices];
-
-            std::cout << "indexaccessor: count " << indexAccessor.count << ", type "
-                      << indexAccessor.componentType << std::endl;
-
-            // tinygltf::Material &mat = model.materials[primitive.material];
-            // for (auto &mats : mat.values) {
-            //     std::cout << "mat : " << mats.first.c_str() << std::endl;
-            // }
-            //
-            // for (auto &image : model.images) {
-            //     std::cout << "image name : " << image.uri << std::endl;
-            //     std::cout << "  size : " << image.image.size() << std::endl;
-            //     std::cout << "  w/h : " << image.width << "/" << image.height
-            //               << std::endl;
-            // }
-
-            std::cout << "indices : " << primitive.indices << std::endl;
-            std::cout << "mode     : "
-                      << "(" << primitive.mode << ")" << std::endl;
-
-            for (auto &attrib : primitive.attributes) {
-                std::cout << "attribute : " << attrib.first.c_str() << std::endl;
-            }
-        }
-    }
-}
+// void GLTFLoader::dbgModel() {
+//     for (auto &mesh : model.meshes) {
+//         std::cout << "mesh : " << mesh.name << std::endl;
+//         for (auto &primitive : mesh.primitives) {
+//             const tinygltf::Accessor &indexAccessor =
+//                 model.accessors[primitive.indices];
+//
+//             std::cout << "indexaccessor: count " << indexAccessor.count << ", type "
+//                       << indexAccessor.componentType << std::endl;
+//
+//             // tinygltf::Material &mat = model.materials[primitive.material];
+//             // for (auto &mats : mat.values) {
+//             //     std::cout << "mat : " << mats.first.c_str() << std::endl;
+//             // }
+//             //
+//             // for (auto &image : model.images) {
+//             //     std::cout << "image name : " << image.uri << std::endl;
+//             //     std::cout << "  size : " << image.image.size() << std::endl;
+//             //     std::cout << "  w/h : " << image.width << "/" << image.height
+//             //               << std::endl;
+//             // }
+//
+//             std::cout << "indices : " << primitive.indices << std::endl;
+//             std::cout << "mode     : "
+//                       << "(" << primitive.mode << ")" << std::endl;
+//
+//             for (auto &attrib : primitive.attributes) {
+//                 std::cout << "attribute : " << attrib.first.c_str() << std::endl;
+//             }
+//         }
+//     }
+// }

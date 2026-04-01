@@ -18,6 +18,7 @@ enum struct ObjectType
     TRANSFORM,
     POINT_LIGHT,
     SPOT_LIGHT,
+    DIRECTIONAL_LIGHT,
     CAMERA,
     MESHGROUP,
     UNKNOWN
@@ -27,15 +28,16 @@ struct RenderObject
 {
     using RenderObjectId = SlotMap<RenderObject>::ElementId;
 
-    Matrix4f transform = {};
+    Matrix4f transform = {}; //model matrix
     // glm::mat4x3 combined_transform = {};
     RenderObjectId firstChild = {};
     RenderObjectId nextSibling = {};
     RenderObjectId parent = {};
 
-    uint32 mesh_group_index = {};
+    uint32 meshGroupIndex = {};
 
     ObjectType type = ObjectType::UNKNOWN;
+
     std::string name = {};
     // std::optional<u32> light_index = {};
     bool dirty = {};
