@@ -6,7 +6,7 @@ Heavily inspired by https://github.com/Sunset-Flock/Timberdoodle.
 
 This project is a reset from my previous engine with a clean slate. Focusing mostly on Vulkan hidden behind an abstraction layer that takes D3D12 into consideration, my focus is on getting accustomed to modern techniques and tools.
 
-## Features (WIP)
+# Features (WIP)
 
 * RHI implementation
 * Vulkan context implementation
@@ -16,7 +16,7 @@ This project is a reset from my previous engine with a clean slate. Focusing mos
 * Deferred Rendering
 
 
-# Later on
+## Later on
 
 * D3D12 context implementation
 * Tile-based Deferred Rendering
@@ -25,7 +25,7 @@ This project is a reset from my previous engine with a clean slate. Focusing mos
 * DDGI
 * this list can go on for ever
   
-## Dependencies
+# Dependencies
 * volk
 * VMA
 * tinygltf
