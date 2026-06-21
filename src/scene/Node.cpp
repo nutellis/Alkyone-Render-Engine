@@ -27,12 +27,12 @@ void Node::RemoveAllChildren()
 
 
 
-Vector3f Node::GetPosition()
+Float3 Node::GetPosition()
 {
     return this->objectPosition;
 }
 
-void Node::SetPosition(Vector3f inPosition)
+void Node::SetPosition(Float3 inPosition)
 {
     if (isMovable) {
         if (parent == nullptr) {
@@ -53,12 +53,12 @@ void Node::SetPosition(Vector3f inPosition)
     }
 }
 
-Vector3f Node::GetRotation()
+Float3 Node::GetRotation()
 {
     return objectRotation;
 }
 
-void Node::SetRotation(Vector3f inRotation)
+void Node::SetRotation(Float3 inRotation)
 {
     if (parent == nullptr) {
         objectRotation = inRotation;
@@ -76,7 +76,7 @@ void Node::SetRotation(Vector3f inRotation)
     // }
 }
 
-void Node::AddRotation(Vector3f inRotation)
+void Node::AddRotation(Float3 inRotation)
 {
     objectRotation = inRotation;
 
@@ -87,14 +87,14 @@ void Node::resetOrientation()
     //TODO: resetOrientation
 }
 
-Vector3f Node::GetScale()
+Float3 Node::GetScale()
 {
     //TODO: do something for uniform scaling? Maybe return a float?
     return objectScale;
 
 }
 
-void Node::SetScale(Vector3f inScale)
+void Node::SetScale(Float3 inScale)
 {
     objectScale = inScale;
     // if (ActorType == MODEL) {

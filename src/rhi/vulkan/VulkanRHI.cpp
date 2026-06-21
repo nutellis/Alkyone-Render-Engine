@@ -374,7 +374,7 @@ void VulkanRHI::EndFrame()
     frameSync->EndSynchronize();
 }
 
-void VulkanRHI::ClearColour(Vector3f colour)
+void VulkanRHI::ClearColour(Float3 colour)
 {
     VkClearColorValue clearColor = {};
     clearColor.float32[0] = colour.R;
@@ -445,26 +445,26 @@ void VulkanRHI::BindPipeline(uint32_t pipelineID)
 
 void VulkanRHI::PrepareVertexBuffer(Mesh & mesh)
 {
-    if (mesh.buffer == nullptr)
-    {
-        mesh.buffer = new VulkanBuffer(*device);
-        BufferDesc desc = {
-            .size = mesh.vertices.size() * sizeof(Vertex) + mesh.indices.size() * sizeof(uint32),
-            .usageFlags = BufferTypeBits::VERTEX_BUFFER | BufferTypeBits::INDEX_BUFFER,
-            .sharingMode = SharingMode::EXCLUSIVE
-        };
-        mesh.buffer->Initialize(desc);
-    }
-
-    mesh.buffer->CopyData(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
-    mesh.buffer->CopyData(mesh.indices.data(), mesh.indices.size() * sizeof(uint32), mesh.vertices.size() * sizeof(Vertex));
-
-    VulkanBuffer & vBuffer = static_cast<VulkanBuffer &>(*mesh.buffer);
-
-    VkDeviceSize vBufSize{ sizeof(Vertex) * 3 };
-    VkDeviceSize vOffset{ 0 };
-    vkCmdBindVertexBuffers(cmd->GetVkCommandBuffer(), 0, 1, &vBuffer.buffer, &vOffset);
-    vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT16);
+    // if (mesh.buffer == nullptr)
+    // {
+    //     mesh.buffer = new VulkanBuffer(*device);
+    //     BufferDesc desc = {
+    //         .size = mesh.vertices.size() * sizeof(Vertex) + mesh.indices.size() * sizeof(uint32),
+    //         .usageFlags = BufferTypeBits::VERTEX_BUFFER | BufferTypeBits::INDEX_BUFFER,
+    //         .sharingMode = SharingMode::EXCLUSIVE
+    //     };
+    //     mesh.buffer->Initialize(desc);
+    // }
+    //
+    // mesh.buffer->CopyData(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
+    // mesh.buffer->CopyData(mesh.indices.data(), mesh.indices.size() * sizeof(uint32), mesh.vertices.size() * sizeof(Vertex));
+    //
+    // VulkanBuffer & vBuffer = static_cast<VulkanBuffer &>(*mesh.buffer);
+    //
+    // VkDeviceSize vBufSize{ sizeof(Vertex) * 3 };
+    // VkDeviceSize vOffset{ 0 };
+    // vkCmdBindVertexBuffers(cmd->GetVkCommandBuffer(), 0, 1, &vBuffer.buffer, &vOffset);
+    // vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT16);
 }
 
 void VulkanRHI::PrepareVertexBuffer(uint32_t bufferID)

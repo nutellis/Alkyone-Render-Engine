@@ -5,7 +5,6 @@
 #include "rendering/Mesh.h"
 #include <rendering/types/Vertex.h>
 
-#include "rhi/core/IBuffer.h"
 
 Mesh::Mesh()
 {

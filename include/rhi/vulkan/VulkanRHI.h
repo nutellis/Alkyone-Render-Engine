@@ -47,7 +47,7 @@ public:
     //Drawing
     bool BeginFrame() override;
     void EndFrame() override;
-    void ClearColour(Vector3f colour) override;
+    void ClearColour(Float3 colour) override;
     void BeginRendering() override;
     void EndRendering() override;
     void BindPipeline(uint32_t pipelineID) override;

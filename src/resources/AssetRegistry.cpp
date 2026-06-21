@@ -2,11 +2,11 @@
 // Created by Nutellis on 24-Mar-26.
 //
 
-#include "AssetRegistry.h"
+#include "../../include/resources/AssetRegistry.h"
 
 #include <rendering/Mesh.h>
 
-#include "utilities/GLTFLoader.h"
+#include "../../include/resources/mesh/GLTFImporter.h"
 
 AssetRegistry::AssetRegistry()
 {

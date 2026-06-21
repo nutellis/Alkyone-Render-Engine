@@ -18,7 +18,6 @@ namespace pod
     typedef int64 ptr;
     typedef unsigned __int64 uint64;
 
-
     typedef signed int int32;
     typedef unsigned int uint32;
 
@@ -31,6 +30,20 @@ namespace pod
 }
 
 #define BIT(x) (1ULL << (x))
+
+struct Handle
+{
+    Handle() : generation(0), index(0) { }
+    Handle(uint32 gen, uint32 idx) : generation(gen), index(idx) { }
+
+    uint32 generation: 16;
+    uint32 index: 16;
+
+    [[nodiscard]] uint32 ID() const
+    {
+        return ((generation << 16) | index );
+    }
+};
 
 using namespace pod;
 #endif //ALKYONERENDERENGINE_PODTYPES_H

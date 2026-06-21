@@ -51,6 +51,14 @@ inline TMatrix4<T>::TMatrix4(const T Scalar)
 }
 
 template <typename T>
+TMatrix4<T>::TMatrix4(const double* Other)
+{
+	for (int i = 0; i < 4; ++i) {
+		M[i] = static_cast<T>(Other[i]);
+	}
+}
+
+template <typename T>
 template <typename U>
 inline TMatrix4<T>::TMatrix4
 (const TVector3<U>& In0, const TVector3<U>& In1, const TVector3<U>& In2, const TVector3<U>& In3)

@@ -7,12 +7,12 @@
 #include <string>
 
 #include "containers/SlotMap.h"
-#include "math/Matrix4.h"
+
 
 class MeshGroup;
 
 
-enum struct ObjectType
+enum struct ObjectType : uint32
 {
     ROOT,
     TRANSFORM,
@@ -24,24 +24,29 @@ enum struct ObjectType
     UNKNOWN
 };
 
+struct RenderObjectHandle
+{
+    Handle id;
+};
+
 struct RenderObject
 {
-    using RenderObjectId = SlotMap<RenderObject>::ElementId;
 
-    Matrix4f transform = {}; //model matrix
-    // glm::mat4x3 combined_transform = {};
-    RenderObjectId firstChild = {};
-    RenderObjectId nextSibling = {};
-    RenderObjectId parent = {};
+public:
 
-    uint32 meshGroupIndex = {};
+    RenderObjectHandle firstChild = {
+        Handle(1, 0xFFFFFFFF)
+    };
+    RenderObjectHandle nextSibling = {
+        Handle(1, 0xFFFFFFFF)
+    };
+    RenderObjectHandle parent = {
+        Handle(1, 0xFFFFFFFF)
+    };
 
-    ObjectType type = ObjectType::UNKNOWN;
-
-    std::string name = {};
-    // std::optional<u32> light_index = {};
-    bool dirty = {};
 };
+
+
 
 
 #endif //ALKYONERENDERENGINE_RENDERENTITY_H

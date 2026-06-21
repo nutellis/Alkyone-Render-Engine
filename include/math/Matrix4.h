@@ -21,11 +21,12 @@
 #include <math/SSEMath.h>
 
 #include <math/Types.h>
+#include <math/Vector4.h>
 
 //Matrix4 struct 4x4 Matrix
 template <typename T>
-#pragma pack(push, 1)
-struct TMatrix4
+
+struct alignas(16) TMatrix4
 {
 
 private:
@@ -40,11 +41,13 @@ public:
 
 	TMatrix4(const T Scalar);
 
+	TMatrix4(const double* Other);
+
 	template<typename U>
 	TMatrix4(const TVector3<U>& In0, const TVector3<U>& In1, const TVector3<U>& In2, const TVector3<U>& In3);
 
-	template<typename T>
-	TMatrix4(const TVector4<T>& In0, const TVector4<T>& In1, const TVector4<T>& In2, const TVector4<T>& In3);
+	template<typename U>
+	TMatrix4(const TVector4<U>& In0, const TVector4<U>& In1, const TVector4<U>& In2, const TVector4<U>& In3);
 
 	const TVector4<T>& operator[](uint8 i) const;
 
@@ -74,10 +77,10 @@ public:
 
 	//inline TMatrix4 Translate(const Vector& Translation, const TMatrix4& Destination) const;
 
-	//template<typename T>
-	//T * value_ptr
+	//template<typename U>
+	//U * value_ptr
 	//(
-	//	TMatrix4<T> & mat
+	//	TMatrix4<U> & mat
 	//)
 	//{
 	//	return (mat[0]);
@@ -90,7 +93,6 @@ public:
 
 	void Print();
 };
-#pragma pack(pop) 
 
 #include <math/Matrix4.inl>
 

@@ -23,6 +23,15 @@ inline TVector4<Type>::TVector4(const TVector4<Type> & inVec4) : X(inVec4.X), Y(
 {}
 
 template <typename Type>
+TVector4<Type>::TVector4(const double* Other)
+{
+	X = static_cast<Type>(Other[0]);
+	Y = static_cast<Type>(Other[1]);
+	Z = static_cast<Type>(Other[2]);
+	W = static_cast<Type>(Other[3]);
+}
+
+template <typename Type>
 inline TVector4<Type>::TVector4(const Type inX, const Type inY, const Type inZ, const Type inW) : X(inX), Y(inY), Z(inZ), W(inW)
 {}
 

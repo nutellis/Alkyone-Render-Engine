@@ -5,6 +5,7 @@
 #ifndef ALKYONERENDERENGINE_ENGINE_H
 #define ALKYONERENDERENGINE_ENGINE_H
 #include "rhi/core/DynamicRHI.h"
+#include "scene/SceneManager.h"
 
 #include "shaders/ShaderManager.h"
 
@@ -25,6 +26,7 @@ private:
 
     DynamicRHI *rhi;
     ShaderManager *shaderManager;
+    SceneManager *sceneManager;
 
 public:
     AlkyoneRenderEngine();

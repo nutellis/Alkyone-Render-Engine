@@ -4,11 +4,11 @@
 
 #include "rendering/types/Vertex.h"
 
-Vertex::Vertex(Vector3f Pos) : position(Pos), normal(Vector3f(0, 1, 0)), uvs(Vector2f(0.0f))
+Vertex::Vertex(Float3 Pos) : position(Pos), normal(Float3(0, 1, 0)), uvs(Float2(0.0f))
 {
 }
 
-Vertex::Vertex(Vector3f Pos, Vector3f Norm, Vector2f UV): position(Pos), normal(Norm), uvs(UV)
+Vertex::Vertex(Float3 Pos, Float3 Norm, Float2 UV): position(Pos), normal(Norm), uvs(UV)
 {}
 
 Vertex::Vertex(const Vertex& Other):

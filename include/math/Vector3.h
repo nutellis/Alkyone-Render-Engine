@@ -27,6 +27,8 @@ public:
 
 	TVector3(const Type Scalar);
 
+	TVector3(const double* Other);
+
 	template <typename U>
 	TVector3(TVector2<U> inVec2);
 

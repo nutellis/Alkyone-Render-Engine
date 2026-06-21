@@ -26,6 +26,8 @@ public:
 
 	TVector4(const TVector4 & inVec4);
 
+	TVector4(const double* Other);
+
 	template <typename U>
 	TVector4(const TVector4<U>& Other);
 

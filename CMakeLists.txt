@@ -92,8 +92,16 @@ add_executable(AlkyoneRenderer main.cpp ${SRC_FILES}
         include/rendering/view/Camera.h
         include/rendering/object/GPUMesh.cpp
         include/rendering/object/GPUMesh.h
-        include/rendering/AssetRegistry.cpp
-        include/rendering/AssetRegistry.h)
+        src/resources/AssetRegistry.cpp
+        include/resources/AssetRegistry.h
+        src/rendering/RenderScene.cpp
+        include/rendering/RenderScene.h
+        include/resources/ResourceHandle.h
+        include/resources/Resource.h
+        include/resources/ResourceManager.cpp
+        include/resources/ResourceManager.h
+        include/scene/SceneManager.cpp
+        include/scene/SceneManager.h)
 
 target_compile_options(AlkyoneRenderer
         PRIVATE

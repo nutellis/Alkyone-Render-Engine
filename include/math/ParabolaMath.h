@@ -152,10 +152,30 @@ static TMatrix4<T> Rotate(float Angle, TVector3<T> const & InVector)
 template <typename T>
 static TMatrix4<T> Rotate(TVector3<T> Rotator, TMatrix4<T> const& Source) {
 
-	TMatrix4<T> RotatorX = Rotate(Vector3f(1.0f, 0.0f, 0.0f), Rotator.X, TMatrix4<T>::IDENTITY);
-	TMatrix4<T> RotatorY = Rotate(Vector3f(0.0f, 1.0f, 0.0f), Rotator.Y, TMatrix4<T>::IDENTITY);
-	TMatrix4<T> RotatorZ = Rotate(Vector3f(0.0f, 0.0f, 1.0f), Rotator.Z, TMatrix4<T>::IDENTITY);
+	TMatrix4<T> RotatorX = Rotate(Float3(1.0f, 0.0f, 0.0f), Rotator.X, TMatrix4<T>::IDENTITY);
+	TMatrix4<T> RotatorY = Rotate(Float3(0.0f, 1.0f, 0.0f), Rotator.Y, TMatrix4<T>::IDENTITY);
+	TMatrix4<T> RotatorZ = Rotate(Float3(0.0f, 0.0f, 1.0f), Rotator.Z, TMatrix4<T>::IDENTITY);
 	return RotatorZ * RotatorY * RotatorX * Source;
+}
+
+template <typename T>
+static TVector3<T> QuatToEuler(TVector4<T> Quaternion)
+{
+	TVector3<T> Result = TVector3<T>::ZERO;
+
+	Result.X = atan2(2 * (Quaternion.W * Quaternion.X + Quaternion.Y * Quaternion.Z), 1 - 2 * (Quaternion.X * Quaternion.X + Quaternion.Y * Quaternion.Y));
+	float theta = 2 * (Quaternion.W * Quaternion.Y - Quaternion.Z * Quaternion.X);
+
+	if (std::abs(theta) <= 1.0f)
+	{
+		Result.Y = std::copysign(3.14159265f / 2.0f, theta);
+	} else
+	{
+		Result.Y = asin(theta);
+	}
+	Result.Z =  atan2(2 *(Quaternion.W * Quaternion.Z + Quaternion.X * Quaternion.Y), 1 - 2 * (Quaternion.Y * Quaternion.Y + Quaternion.Z * Quaternion.Z));
+
+	return Result;
 }
 
 template <typename Type>
@@ -297,7 +317,7 @@ static TVector2<float> ConcentricSampleDisk()
 	// Handle degeneracy at the origin (avoid div by zero)
 	if (SampleX == 0.0 && SampleY == 0.0)
 	{
-		return Vector2f(0, 0);
+		return Float2(0, 0);
 	}
 	// Map square to $(r,\theta)$
 	if (SampleX >= -SampleY)

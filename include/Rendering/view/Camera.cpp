@@ -87,7 +87,7 @@ Frustrum::~Frustrum()
 //----------------------------------------------------------------------------------------
 //									CAMERA COMPONENT
 //----------------------------------------------------------------------------------------
-Camera::Camera(Vector3f up, float yaw, float pitch) : front(Vector3f(0.0f, 0.0f, -1.0f)), right(Vector3f(1.0f, 0.0f, 0.0f)), movementSpeed(1.0f), mouseSensitivity(0.5f), zoom(60.0f)
+Camera::Camera(Float3 up, float yaw, float pitch) : front(Float3(0.0f, 0.0f, -1.0f)), right(Float3(1.0f, 0.0f, 0.0f)), movementSpeed(1.0f), mouseSensitivity(0.5f), zoom(60.0f)
 {
 	up = up;
 	worldUp = up;
@@ -114,9 +114,9 @@ Camera::Camera(Vector3f up, float yaw, float pitch) : front(Vector3f(0.0f, 0.0f,
 }
 
 Camera::Camera(float upX, float upY, float upZ, float yaw, float pitch)
-	: front(Vector3f(0.0f, 0.0f, -1.0f)), movementSpeed(1.0f), mouseSensitivity(0.5f), zoom(60.0f)
+	: front(Float3(0.0f, 0.0f, -1.0f)), movementSpeed(1.0f), mouseSensitivity(0.5f), zoom(60.0f)
 {
-	up = Vector3f(upX, upY, upZ);
+	up = Float3(upX, upY, upZ);
 	yaw = yaw;
 	pitch = pitch;
 	// UpdateCameraVectors();
@@ -283,11 +283,11 @@ void Camera::SetDefaults()
 	const float FOV = 60.0f;
 }
 
-Matrix4f Camera::LookAt(const Vector3f& eye, const Vector3f& center, const Vector3f& up = Vector3f(0.0f, 1.0f, 0.0f))
+Matrix4f Camera::LookAt(const Float3& eye, const Float3& center, const Float3& up = Float3(0.0f, 1.0f, 0.0f))
 {
-	Vector3f F = Normalize(center - eye);
-	Vector3f R = Normalize(Cross(F, up));
-	Vector3f U = (Cross(R,F));
+	Float3 F = Normalize(center - eye);
+	Float3 R = Normalize(Cross(F, up));
+	Float3 U = (Cross(R,F));
 
 	Matrix4f Result = Matrix4f::IDENTITY;
 

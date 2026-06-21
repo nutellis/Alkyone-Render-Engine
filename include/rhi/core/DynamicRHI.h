@@ -56,7 +56,7 @@ public:
     // Drawing
     virtual bool BeginFrame() = 0;
     virtual void EndFrame() = 0;
-    virtual void ClearColour(Vector3f colour) = 0;
+    virtual void ClearColour(Float3 colour) = 0;
     virtual void BeginRendering() = 0;
     virtual void EndRendering() = 0;
     virtual void BindPipeline(uint32_t pipelineID) = 0;

@@ -9,7 +9,6 @@
 
 #include "core/PODTypes.h"
 
-class IBuffer;
 struct Vertex;
 
 class Mesh

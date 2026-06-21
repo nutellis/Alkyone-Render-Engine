@@ -28,7 +28,7 @@ enum ProjectionType {
 };
 
 struct Plane {
-    Vector3f normal{};
+    Float3 normal{};
     float d{};
 };
 
@@ -62,9 +62,9 @@ public:
     // Constructor with vectors
     //Camera(Vector3f up = Vector3f(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
 
-    Camera(Node* parent, Vector3f up = Vector3f(0.0f, 1.0f, 0.0f), float yaw = 0.0f, float pitch = 0.0f);
+    Camera(Node* parent, Float3 up = Float3(0.0f, 1.0f, 0.0f), float yaw = 0.0f, float pitch = 0.0f);
 
-    Camera(Vector3f up, float yaw, float pitch);
+    Camera(Float3 up, float yaw, float pitch);
     // Constructor with scalar values
     Camera(float upX, float upY, float upZ, float yaw, float pitch);
 
@@ -101,7 +101,7 @@ public:
     // should this be here??
    // void SetupShaderCamera(Shader* ActiveShader);
 
-    static Matrix4f LookAt(const Vector3f& eye, const Vector3f& center, const Vector3f& up);
+    static Matrix4f LookAt(const Float3& eye, const Float3& center, const Float3& up);
     static Matrix4f Ortho(const float& left, const float& right, const float& bottom, const float& top, const float& zNear,
                    const float& zFar);
     static Matrix4f OrthoCentered(const float& width, const float& height, const float& zNear, const float& zFar);
@@ -114,10 +114,10 @@ public:
 
 
     // Camera Attributes
-    Vector3f front;
-    Vector3f up;
-    Vector3f right;
-    Vector3f worldUp;
+    Float3 front;
+    Float3 up;
+    Float3 right;
+    Float3 worldUp;
 
 
     // Euler Angles

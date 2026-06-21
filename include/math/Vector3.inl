@@ -34,6 +34,14 @@ template <typename Type>
 inline TVector3<Type>::TVector3(const Type Scalar) : X(Scalar), Y(Scalar), Z(Scalar)
 {}
 
+template <typename Type>
+TVector3<Type>::TVector3(const double* Other)
+{
+	X = static_cast<Type>(Other[0]);
+	Y = static_cast<Type>(Other[1]);
+	Z = static_cast<Type>(Other[2]);
+}
+
 template<typename Type>
 template<typename U>
 inline TVector3<Type>::TVector3(TVector2<U> inVec2) :
@@ -175,7 +183,7 @@ inline TVector3<Type> TVector3<Type>::operator*(const TMatrix4<Type>& InMatrix) 
 		Z /= InMatrix.W;
 	}
 
-	return TVector3<T>(X, Y, Z);
+	return TVector3<Type>(X, Y, Z);
 }
 
 template <typename Type>

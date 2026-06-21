@@ -16,11 +16,15 @@
 #include "rhi/core/IFrameSync.h"
 #include "rhi/core/barriers/ImageBarrier.h"
 #include "spdlog/spdlog.h"
-#include "utilities/GLTFLoader.h"
+#include "../../include/resources/mesh/GLTFImporter.h"
 
 #include <utilities/TypeUtilities.h>
 
-AlkyoneRenderEngine::AlkyoneRenderEngine(): window(nullptr), rhi(nullptr), shaderManager(nullptr)
+AlkyoneRenderEngine::AlkyoneRenderEngine():
+window(nullptr),
+rhi(nullptr),
+shaderManager(nullptr),
+sceneManager(nullptr)
 {
 }
 
@@ -29,17 +33,16 @@ AlkyoneRenderEngine::~AlkyoneRenderEngine()
     delete window;
     delete rhi;
     delete shaderManager;
+    delete sceneManager;
 }
 
 bool AlkyoneRenderEngine::Initialize()
 {
     if (glfwInit() == false)
     {
-        //LOG(ERROR, "GLFW cannot be initialized");
-        //LOG(ERROR, "It's fine, really. Nothing is working though. :) ");
-
-        //LOG(FATAL, "WINDOW MANAGER FAILED INITIATON\n");
-        //send terminating signal
+        spdlog::error("GLFW cannot be initialized");
+        spdlog::error( "It's fine, really. Nothing is working though. :) ");
+        spdlog::error( "Fatal Error - Alkyone Render Engine \n");
 
         return false;
     }
@@ -55,11 +58,16 @@ bool AlkyoneRenderEngine::Initialize()
     shaderManager = new ShaderManager();
     shaderManager->Initialize(rhi->GetSlangTargetOptions());
 
+    sceneManager = new SceneManager();
+    sceneManager->Initialize();
+
     return true;
 }
 
 void AlkyoneRenderEngine::Terminate()
 {
+    sceneManager->Terminate();
+    //shaderManager->Terminate();
     rhi->Terminate();
     window->Terminate();
     glfwTerminate();
@@ -87,13 +95,10 @@ void AlkyoneRenderEngine::Run()
 
     rhi->CreatePipeline(desc);
 
-
+    std::string filename = std::string("../assets/chess/chess_set_1k.gltf");
+    GLTFImporter::ImportSceneFile(filename, *sceneManager);
     MeshGroup* meshgroup = new MeshGroup();
 
-    auto loader = GLTFLoader();
-
-    loader.Load(TODO, TODO);
-    loader.PopulateMeshGroup(TODO, *meshgroup);
 
     while (!glfwWindowShouldClose(window->windowHandle)) {
         glfwPollEvents();

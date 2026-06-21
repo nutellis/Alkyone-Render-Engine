@@ -1,0 +1,12 @@
+//
+// Created by Nutellis on 13-Jun-26.
+//
+
+#ifndef ALKYONERENDERENGINE_RESOURCEHANDLE_H
+#define ALKYONERENDERENGINE_RESOURCEHANDLE_H
+#include <string>
+
+
+
+
+#endif //ALKYONERENDERENGINE_RESOURCEHANDLE_H

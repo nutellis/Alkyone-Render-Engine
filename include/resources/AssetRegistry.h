@@ -7,7 +7,7 @@
 #include "containers/SlotMap.h"
 
 
-class GLTFLoader;
+class GLTFImporter;
 class Mesh;
 
 class AssetRegistry
@@ -20,7 +20,7 @@ public:
     void Terminate();
 
 public:
-    SlotMap<Mesh> meshes; //change this to MeshGroup
+    SlotMap<Mesh> meshes; //change this to MeshGroup in the future
 
 
     void AddMesh(Mesh& mesh);

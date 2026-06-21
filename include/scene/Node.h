@@ -26,23 +26,23 @@ public:
 
 
     // position, rotation, scale
-    Vector3f GetPosition();
+    Float3 GetPosition();
 
     //TODO : always relative to the parent SceneNode
-    void SetPosition(Vector3f inPosition);
+    void SetPosition(Float3 inPosition);
 
     //You can move the object relative to its current position by using the translate method.
     //void Translate(Vector3f Translation);
 
-    Vector3f GetRotation();
+    Float3 GetRotation();
 
     //TODO : always relative to the parent SceneNode
     //You can use the pitch, yaw, and roll functions to rotate objects.
-    void SetRotation(Vector3f inRotation);
-    void AddRotation(Vector3f inRotation);
+    void SetRotation(Float3 inRotation);
+    void AddRotation(Float3 inRotation);
     void resetOrientation();
-    Vector3f GetScale();
-    void SetScale(Vector3f inScale);
+    Float3 GetScale();
+    void SetScale(Float3 inScale);
     void SetScale(float inScale);
 
 protected:
@@ -54,16 +54,16 @@ protected:
 
     uint32 nodeID {};
     // Stores the position/translation of the node
-    Vector3f objectPosition {};
+    Float3 objectPosition {};
 
     // Stores the rotation of the node.
-    Vector3f objectRotation {};
+    Float3 objectRotation {};
 
     //Quaternion Orientation;
     //...
 
     // Stores the uniform scaling factor applied to this node if relevant
-    Vector3f objectScale {1.0f, 1.0f, 1.0f};
+    Float3 objectScale {1.0f, 1.0f, 1.0f};
 
     bool isMovable {};
 

@@ -8,18 +8,19 @@
 
 #include <math/Vector2.h>
 #include <math/Vector3.h>
+#include "math/Vector4.h"
 
 struct alignas(4) Vertex {
 public:
     // position
-    Vector3f position {};
+    Float3 position {};
     // normal
-    Vector3f normal {};
+    Float3 normal {};
     // texCoords
-    Vector2f uvs {};
+    Float2 uvs {};
 
     //color
-    Vector3f color {};
+    Float4 color {};
     // bitangent
     //Vector3f Binormal;
     // tangent
@@ -28,8 +29,8 @@ public:
     Vertex() = default;
     ~Vertex() = default;
 
-    Vertex(Vector3f Pos);
-    Vertex(Vector3f Pos, Vector3f Norm, Vector2f UV);
+    Vertex(Float3 Pos);
+    Vertex(Float3 Pos, Float3 Norm, Float2 UV);
 
     Vertex(const Vertex& Other);
 
