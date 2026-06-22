@@ -42,3 +42,5 @@ Thumbs.db
 # IDE files (CLion)
 .idea/
 *.iml
+
+copilot-instructions.md
