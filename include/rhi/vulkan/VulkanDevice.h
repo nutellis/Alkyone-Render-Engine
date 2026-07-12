@@ -44,6 +44,7 @@ public:
     [[nodiscard]] VkDevice GetLogicalDevice() const;
     [[nodiscard]] VmaAllocator GetAllocator() const;
     [[nodiscard]] VulkanQueue* GetGraphicsQueue() const;
+    [[nodiscard]] VulkanQueue* GetTransferQueue() const;
 
     VkInstance GetInstance() const;
     void WaitIdle() override;

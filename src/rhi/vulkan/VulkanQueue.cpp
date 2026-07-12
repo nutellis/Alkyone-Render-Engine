@@ -23,7 +23,7 @@ VulkanQueue::~VulkanQueue()
 {
 }
 
-bool VulkanQueue::Initialize()
+bool VulkanQueue::Initialize(size_t poolSize = FRAMES_IN_FLIGHT)
 {
     VkDevice logicalDevice = parentDevice.GetLogicalDevice();
     if (logicalDevice == VK_NULL_HANDLE)
@@ -40,7 +40,8 @@ bool VulkanQueue::Initialize()
         return false;
     }
 
-    for (int i=0; i<FRAMES_IN_FLIGHT; ++i)
+    pools.resize(poolSize);
+    for (int i=0; i < poolSize; ++i)
     {
         VulkanCommandPool * pool = new VulkanCommandPool(parentDevice, familyIndex);
 
@@ -78,15 +79,15 @@ uint32 VulkanQueue::GetFamilyIndex() const
     return familyIndex;
 }
 
-VulkanCommandPool* VulkanQueue::GetCommandPool(uint32 frameIndex)
+VulkanCommandPool* VulkanQueue::GetCommandPool(uint32 index)
 {
-    if (frameIndex >= FRAMES_IN_FLIGHT)
+    if (index >= pools.size())
     {
         spdlog::error("Alkyone RHI: Invalid frame index when retrieving command pool");
         return nullptr;
     }
 
-    return pools[frameIndex];
+    return pools[index];
 }
 
 void VulkanQueue::AllocateCommandBuffers(const uint32 count)
@@ -97,6 +98,7 @@ void VulkanQueue::AllocateCommandBuffers(const uint32 count)
     }
 }
 
+//TODO: i probably need a SubmitImmediate(ICommandBuffer & cmdBuffer)
 void VulkanQueue::SubmitCommandBuffer(IFrameSync & sync, ICommandBuffer & cmdBuffer)
 {
     const VulkanCommandBuffer & vkCmdBuffer = static_cast<VulkanCommandBuffer&>(cmdBuffer);

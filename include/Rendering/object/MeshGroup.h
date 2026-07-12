@@ -5,17 +5,24 @@
 #ifndef ALKYONERENDERENGINE_MESHGROUP_H
 #define ALKYONERENDERENGINE_MESHGROUP_H
 
-#include "containers/DArray.h"
+#include <vector>
+#include <core/PODTypes.h>
 
 
 class MeshLodGroup;
 class Mesh;
+struct Vertex;
 
 class MeshGroup
 {
     // a collection of all the meshes (and their LODs) that make up the object.
 public:
-    DArray<Mesh *> meshLodGroups;
+    std::vector<Vertex> vertices;
+    std::vector<uint32> indices; // consider uint16
+
+    std::vector<Mesh> subMeshes;
+
+    Handle bufferHandle;
 
 public:
     MeshGroup();

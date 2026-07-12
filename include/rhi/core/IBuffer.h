@@ -6,7 +6,6 @@
 #define ALKYONERENDERENGINE_IBUFFER_H
 #include "rhi/descriptors/BufferDesc.h"
 
-
 class IBuffer
 {
 public:
@@ -15,9 +14,8 @@ public:
 
     virtual bool Initialize(BufferDesc desc) = 0;
     virtual void Terminate() = 0;
-
-    virtual void CopyData(const void* data, uint64 size, uint64 offset = 0) = 0;
-
+    virtual void Map() = 0;
+    virtual void Unmap() = 0;
 };
 
 

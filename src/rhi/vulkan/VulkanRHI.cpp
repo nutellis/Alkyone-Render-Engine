@@ -14,7 +14,6 @@
 
 #include <set>
 
-#include "rendering/Mesh.h"
 #include "rendering/types/Vertex.h"
 #include "rhi/vulkan/VulkanBuffer.h"
 #include "rhi/vulkan/VulkanCommandBuffer.h"
@@ -24,6 +23,8 @@
 #include "spdlog/spdlog.h"
 
 #include <utilities/TypeUtilities.h>
+
+#include "rhi/vulkan/VulkanSwapchain.h"
 
 namespace
 {
@@ -95,9 +96,10 @@ void VulkanRHI::Terminate()
 {
     for (auto pipeline : pipelineStorage)
     {
-        pipeline->DestroyPipeline();
-        delete pipeline;
+        pipeline.DestroyPipeline();
     }
+    pipelineStorage.clear();
+    pipelineStorage.shrink_to_fit();
 
     frameSync->Terminate();
     swapchain->Terminate();
@@ -223,10 +225,10 @@ uint32 VulkanRHI::CreatePipeline(const GraphicsPipelineDesc& desc)
      {
          return pipelineCache[hash];
      }
-    VulkanGraphicsPipeline * pipeline = new VulkanGraphicsPipeline(*device);
-    pipeline->CreatePipeline(desc);
+    VulkanGraphicsPipeline pipeline = VulkanGraphicsPipeline(*device);
+    pipeline.CreatePipeline(desc);
 
-    pipelineStorage.push_back(std::move(pipeline));
+    pipelineStorage.push_back(pipeline);
     size_t index = pipelineStorage.size();
 
     pipelineCache[hash] = static_cast<uint32>(index);
@@ -340,6 +342,118 @@ void VulkanRHI::Validate()
     }
 }
 
+Handle VulkanRHI::CreateBuffer(BufferDesc desc)
+{
+    VulkanBuffer buffer = VulkanBuffer(device);
+    if (buffer.Initialize(desc))
+    {
+        return buffers.createSlot(std::move(buffer));
+    }
+    return Handle{
+        0,0xFFFFFF
+    };
+}
+
+void VulkanRHI::AllocateBuffer(Handle bufferHandle, void * src, size_t size)
+{
+    VulkanBuffer * buffer = buffers.GetSlot(bufferHandle);
+    buffer->Map();
+
+    memcpy(, meshGroup.vertices.data(), verticesByteSize);
+}
+
+IBuffer* VulkanRHI::GetBuffer(Handle handle)
+{
+    return buffers.GetSlot(handle);
+}
+
+
+CopyRequest VulkanRHI::RecordCopyBuffer(Handle src, Handle dst, uint64 size)
+{
+    return {
+        .src = src,
+        .dst = dst,
+        .region = {
+            .srcOffset = 0,
+            .dstOffset = 0,
+            .size = size
+        }
+    };
+}
+
+void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
+{
+
+    //get the queue for tranfer
+    VulkanQueue* transferQueue = device->GetTransferQueue();
+
+    //pool is already alive so now we need to create the command buffer
+    VulkanCommandPool* transferPool = transferQueue->GetCommandPool(0);
+
+    VulkanCommandBuffer * transferBuffer =
+        static_cast<VulkanCommandBuffer*>(
+            transferPool->AllocateCommandBuffer(COMMAND_BUFFER_LEVEL_PRIMARY)
+            );
+    transferBuffer->Begin();
+
+    for (const CopyRequest& request : copyRequests)
+    {
+        VulkanBuffer* srcBuffer = buffers.GetSlot(request.src);
+        VulkanBuffer* dstBuffer = buffers.GetSlot(request.dst);
+
+        VkBufferCopy copyRegion = {
+            .srcOffset = request.region.srcOffset,
+            .dstOffset = request.region.dstOffset,
+            .size = request.region.size
+        };
+
+        vkCmdCopyBuffer(
+            transferBuffer->GetVkCommandBuffer(),
+            srcBuffer->GetVkBuffer(),
+            dstBuffer->GetVkBuffer(),
+            1,
+            &copyRegion
+        );
+    }
+    transferBuffer->End();
+
+    VkCommandBuffer cmdBuffer = transferBuffer->GetVkCommandBuffer();
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+   // transferQueue->SubmitCommandBuffer(*frameSync, *transferBuffer);
+    vkQueueSubmit(transferQueue->GetVkQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+
+    vkQueueWaitIdle(transferQueue->GetVkQueue());
+
+    vkFreeCommandBuffers(device->GetLogicalDevice(), transferPool->GetVkCommandPool(), 1, &cmdBuffer);
+
+}
+
+void VulkanRHI::DestroyBuffer(Handle handle)
+{
+    GetBuffer(handle)->Terminate();
+    buffers.destroySlot(handle);
+}
+
+
+// }
+    //
+    // mesh.buffer->CopyData(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
+    // mesh.buffer->CopyData(mesh.indices.data(), mesh.indices.size() * sizeof(uint32), mesh.vertices.size() * sizeof(Vertex));
+    //
+    // VulkanBuffer & vBuffer = static_cast<VulkanBuffer &>(*mesh.buffer);
+    //        memcpy(static_cast<char*>(dest) + offset, src, size);
+
+    //
+    // VkDeviceSize vBufSize{ sizeof(Vertex) * 3 };
+    // VkDeviceSize vOffset{ 0 };
+    // vkCmdBindVertexBuffers(cmd->GetVkCommandBuffer(), 0, 1, &vBuffer.buffer, &vOffset);
+    // vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT16);
+
 bool VulkanRHI::BeginFrame()
 {
     Validate(); // hard assertion
@@ -355,7 +469,7 @@ bool VulkanRHI::BeginFrame()
         return false;
     }
 
-    cmd = device->GetGraphicsQueue()->GetCommandPool(currentFrame)->GetCommandBuffer();
+    cmd = &device->GetGraphicsQueue()->GetCommandPool(currentFrame)->GetCommandBuffer();
 
     cmd->Reset();
     cmd->Begin();
@@ -439,32 +553,17 @@ void VulkanRHI::BindPipeline(uint32_t pipelineID)
             return;
         }
 
-        VulkanGraphicsPipeline* pipeline = pipelineStorage[pipelineID];
-        vkCmdBindPipeline(cmd->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetVkPipeline());
+        VulkanGraphicsPipeline pipeline = pipelineStorage[pipelineID];
+        vkCmdBindPipeline(cmd->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetVkPipeline());
 }
 
-void VulkanRHI::PrepareVertexBuffer(Mesh & mesh)
+void VulkanRHI::PrepareVertexBuffer(Handle meshHandle)
 {
-    // if (mesh.buffer == nullptr)
-    // {
-    //     mesh.buffer = new VulkanBuffer(*device);
-    //     BufferDesc desc = {
-    //         .size = mesh.vertices.size() * sizeof(Vertex) + mesh.indices.size() * sizeof(uint32),
-    //         .usageFlags = BufferTypeBits::VERTEX_BUFFER | BufferTypeBits::INDEX_BUFFER,
-    //         .sharingMode = SharingMode::EXCLUSIVE
-    //     };
-    //     mesh.buffer->Initialize(desc);
-    // }
-    //
-    // mesh.buffer->CopyData(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
-    // mesh.buffer->CopyData(mesh.indices.data(), mesh.indices.size() * sizeof(uint32), mesh.vertices.size() * sizeof(Vertex));
-    //
-    // VulkanBuffer & vBuffer = static_cast<VulkanBuffer &>(*mesh.buffer);
-    //
+
     // VkDeviceSize vBufSize{ sizeof(Vertex) * 3 };
     // VkDeviceSize vOffset{ 0 };
     // vkCmdBindVertexBuffers(cmd->GetVkCommandBuffer(), 0, 1, &vBuffer.buffer, &vOffset);
-    // vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT16);
+    // vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT32);
 }
 
 void VulkanRHI::PrepareVertexBuffer(uint32_t bufferID)

@@ -142,6 +142,11 @@ VulkanQueue* VulkanDevice::GetGraphicsQueue() const
     return queues[GRAPHICS_QUEUE];
 }
 
+VulkanQueue* VulkanDevice::GetTransferQueue() const
+{
+    return queues[TRANSFER_QUEUE];
+}
+
 VkInstance VulkanDevice::GetInstance() const
 {
     return instance;
@@ -242,7 +247,7 @@ bool VulkanDevice::CreateQueues()
     bool queuesInitialized = true;
     // Queue initialization
     queues[GRAPHICS_QUEUE] = new VulkanQueue(*this, graphicsIndex, GRAPHICS_QUEUE);
-    queuesInitialized = queues[GRAPHICS_QUEUE]->Initialize();
+    queuesInitialized = queues[GRAPHICS_QUEUE]->Initialize(FRAMES_IN_FLIGHT);
     // no dedicated queue found. We leave the index nullptr;
     if (computeIndex == UINT32_MAX)
     {
@@ -251,7 +256,7 @@ bool VulkanDevice::CreateQueues()
     } else
     {
         queues[COMPUTE_QUEUE] = new VulkanQueue(*this, computeIndex, COMPUTE_QUEUE);
-        queuesInitialized &= queues[COMPUTE_QUEUE]->Initialize();
+        queuesInitialized &= queues[COMPUTE_QUEUE]->Initialize(FRAMES_IN_FLIGHT);
     }
     if (transferIndex == UINT32_MAX)
     {
@@ -260,7 +265,7 @@ bool VulkanDevice::CreateQueues()
     } else
     {
         queues[TRANSFER_QUEUE] = new VulkanQueue(*this, transferIndex, TRANSFER_QUEUE);
-        queuesInitialized &= queues[TRANSFER_QUEUE]->Initialize();
+        queuesInitialized &= queues[TRANSFER_QUEUE]->Initialize(1);
     }
 
     if (queuesInitialized == false)

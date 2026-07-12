@@ -9,9 +9,6 @@
 #include "containers/SlotMap.h"
 
 
-class MeshGroup;
-
-
 enum struct ObjectType : uint32
 {
     ROOT,
@@ -24,29 +21,26 @@ enum struct ObjectType : uint32
     UNKNOWN
 };
 
-struct RenderObjectHandle
+struct SceneObjectHandle
 {
     Handle id;
 };
 
-struct RenderObject
+struct SceneObject
 {
 
 public:
 
-    RenderObjectHandle firstChild = {
+    SceneObjectHandle firstChild = {
         Handle(1, 0xFFFFFFFF)
     };
-    RenderObjectHandle nextSibling = {
+    SceneObjectHandle nextSibling = {
         Handle(1, 0xFFFFFFFF)
     };
-    RenderObjectHandle parent = {
+    SceneObjectHandle parent = {
         Handle(1, 0xFFFFFFFF)
     };
 
 };
-
-
-
 
 #endif //ALKYONERENDERENGINE_RENDERENTITY_H

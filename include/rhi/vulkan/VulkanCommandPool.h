@@ -27,7 +27,10 @@ public:
 
     ICommandBuffer* AllocateCommandBuffer(CommandBufferLevel bufferLevel) override;
 
-    [[nodiscard]] VulkanCommandBuffer * GetCommandBuffer() const;
+    [[nodiscard]] VulkanCommandBuffer& GetCommandBuffer() const;
+
+    [[nodiscard]] VkCommandPool GetVkCommandPool() const;
+
 
 private:
     VulkanDevice & device;

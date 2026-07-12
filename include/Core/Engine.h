@@ -9,6 +9,7 @@
 
 #include "shaders/ShaderManager.h"
 
+class ResourceManager;
 class DynamicRHI;
 class ARWindow;
 
@@ -26,6 +27,8 @@ private:
 
     DynamicRHI *rhi;
     ShaderManager *shaderManager;
+
+    ResourceManager *resourceManager;
     SceneManager *sceneManager;
 
 public:
@@ -33,9 +36,9 @@ public:
     ~AlkyoneRenderEngine();
 
     bool Initialize();
-    void Terminate();
+    void Terminate() const;
 
-    void Run();
+    void Run() const;
 
 };
 

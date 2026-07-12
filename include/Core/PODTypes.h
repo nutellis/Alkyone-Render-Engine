@@ -31,15 +31,16 @@ namespace pod
 
 #define BIT(x) (1ULL << (x))
 
+
 struct Handle
 {
     Handle() : generation(0), index(0) { }
-    Handle(uint32 gen, uint32 idx) : generation(gen), index(idx) { }
+    Handle(unsigned int gen, unsigned int index) : generation(gen), index(index) { }
 
-    uint32 generation: 16;
-    uint32 index: 16;
+    unsigned int generation: 16;
+    unsigned int index: 16;
 
-    [[nodiscard]] uint32 ID() const
+    [[nodiscard]] unsigned int ID() const
     {
         return ((generation << 16) | index );
     }

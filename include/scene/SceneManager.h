@@ -8,27 +8,29 @@
 #include <vector>
 
 #include "Scene.h"
+#include "resources/GLTFImporter.h"
 
+struct SceneNode;
 class Scene;
 
 //can hold a list of scenes that can be active or waiting to be loaded
 class SceneManager
 {
-private:
-    SlotMap<Scene> sceneList;
-    Scene activeScene;
-
 public:
     SceneManager();
     ~SceneManager();
 
     bool Initialize();
     void Terminate();
+    void SetupSceneHierarchy(const ParsedData& parsed_data);
+    Handle CreateScene();
 
-    SceneHandle CreateScene();
+    void SetActiveScene(Handle sceneIndex);
+  //  Scene* GetScene(SceneHandle scene);
 
-    void SetActiveScene(SceneHandle sceneIndex);
-    Scene* GetScene(SceneHandle scene);
+private:
+    SlotMap<Scene> sceneList;
+    Scene activeScene;
 };
 
 

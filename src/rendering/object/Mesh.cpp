@@ -2,7 +2,7 @@
 // Created by Nutellis on 23-Jan-26.
 //
 
-#include "rendering/Mesh.h"
+#include "../../../include/rendering/object/Mesh.h"
 #include <rendering/types/Vertex.h>
 
 

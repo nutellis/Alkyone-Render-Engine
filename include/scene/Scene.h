@@ -6,10 +6,10 @@
 #define ALKYONERENDERENGINE_SCENE_H
 
 #include <core/PODTypes.h>
-#include "RenderObject.h"
+#include "SceneObject.h"
 #include "containers/SlotMap.h"
 #include "math/Matrix4.h"
-#include "rendering/Mesh.h"
+#include "../rendering/object/Mesh.h"
 
 
 struct SceneHandle {
@@ -23,12 +23,12 @@ private:
     // SlotMap<RenderObject> renderObjects; // i dont have a need for dynamic scenes at the moment
 
 public: //TODO: make them private later please
-    std::vector<RenderObject> renderObjects; // a list of all the objects
+    std::vector<SceneObject> objects; // a list of all the objects
     std::vector<Matrix4f> transforms;
     std::vector<std::string> names;
     std::vector<bool> dirty;
     std::vector<ObjectType> types;
-    std::vector<uint32> meshIndices;
+    std::vector<Handle> meshIndices;
 
 public:
 
@@ -36,8 +36,8 @@ public:
     Scene() = default;
     ~Scene() = default;
 
-    RenderObjectHandle AddRenderObject(RenderObject& object);
-    void RemoveRenderObject(RenderObjectHandle renderObjectHandle);
+    SceneObjectHandle AddSceneObject(SceneObject& object);
+    void RemoveRenderObject(SceneObjectHandle renderObjectHandle);
 
     void Update();
 };

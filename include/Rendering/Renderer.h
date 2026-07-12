@@ -7,14 +7,25 @@
 #include "containers/SlotMap.h"
 
 
-class GPUMesh;
+class ResourceManager;
+class Mesh;
 
 class Renderer
 {
 public:
-    SlotMap<GPUMesh> meshes;
+    Renderer() = delete;
+    explicit Renderer(ResourceManager& resourceManager);
+    ~Renderer();
 
-    //materials - pipelines
+    bool Initialize();
+    void Terminate();
+
+
+private:
+    ResourceManager& resourceManager;
+
+    std::vector<Mesh> allMeshes;
+
 
 };
 

@@ -5,6 +5,7 @@
 #ifndef ALKYONERENDERENGINE_SLOTMAP_H
 #define ALKYONERENDERENGINE_SLOTMAP_H
 
+#include <optional>
 #include <core/PODTypes.h>
 #include <vector>
 
@@ -13,7 +14,7 @@ struct SlotMap
 {
 
 public:
-    Handle createSlot(T&& slotObject = {})
+    Handle createSlot(T&& slotObject)
     {
         //that means that we have empty slots somewhere
         if (freeSlotsTracker.empty() == false)
@@ -47,7 +48,7 @@ public:
 
             //free the data at the index
             //delete data[index];
-            data[index] = T{};
+            data[index].reset();
 
             indices[index].generation = (indices[index].generation + 1) & 0xFFFF;
 
@@ -71,19 +72,19 @@ public:
 
     T& operator[](Handle id)
     {
-        return data[static_cast<size_t>(id.index)];
+        return data[static_cast<size_t>(id.index)].value();
     }
 
     T* GetSlot(Handle id) {
         if (IsIdValid(id)) {
-            return &data[static_cast<size_t>(id.index)];
+            return &data[static_cast<size_t>(id.index)].value();
         }
         return nullptr;
     }
 
 private:
     std::vector<Handle> indices;
-    std::vector<T> data;
+    std::vector<std::optional<T>> data;
 
     // keeps a LIFO queue of the empty indices on data.
     std::vector<size_t> freeSlotsTracker;

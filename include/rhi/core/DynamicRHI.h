@@ -7,17 +7,20 @@
 
 #include <string>
 
+#include "ICommandBuffer.h"
 #include "slang.h"
 #include "math/Vector3.h"
-#include "rendering/Mesh.h"
 
-
+class ARWindow;
 class IBuffer;
-struct ImageBarrier;
 class IFrameSync;
+
+
 struct CommandPoolDesc;
 struct GraphicsPipelineDesc;
-class ARWindow;
+struct ImageBarrier;
+struct BufferDesc;
+struct Handle;
 
 enum class RendererBackend {
     OpenGL,
@@ -33,7 +36,6 @@ struct ContextSlangTargetOptions
     slang::CompilerOptionValue value;
 
 };
-
 
 class DynamicRHI
 {
@@ -53,6 +55,14 @@ public:
     static DynamicRHI* CreateContext(ARWindow* windowHandle, RendererBackend rendererBackend);
 
     virtual void Validate() = 0;
+
+    // Buffers
+    virtual Handle CreateBuffer(BufferDesc desc) = 0;
+    virtual IBuffer* GetBuffer(Handle handle) = 0;
+    virtual CopyRequest RecordCopyBuffer(Handle src, Handle dst, uint64 size) = 0;
+    virtual void SubmitCopyBuffer(std::vector<CopyRequest> copyRequests) = 0;
+    virtual void DestroyBuffer(Handle buffer) = 0;
+
     // Drawing
     virtual bool BeginFrame() = 0;
     virtual void EndFrame() = 0;
@@ -61,7 +71,7 @@ public:
     virtual void EndRendering() = 0;
     virtual void BindPipeline(uint32_t pipelineID) = 0;
     virtual void PrepareVertexBuffer(uint32_t bufferID) = 0;
-    virtual void PrepareVertexBuffer(Mesh& mesh) = 0;
+    //virtual void PrepareVertexBuffer(Mesh& mesh) = 0;
     virtual void BindIndexBuffer(uint32_t bufferID) = 0;
     //TODO: find out what is needed.
     //virtual void DrawIndexed() = 0;

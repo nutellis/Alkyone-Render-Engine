@@ -20,19 +20,63 @@ namespace
         if (flag & Underlying(BufferTypeBits::UNIFORM_BUFFER)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         if (flag & Underlying(BufferTypeBits::STORAGE_BUFFER)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         if (flag & Underlying(BufferTypeBits::SHADER_DATA_BUFFER)) flags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-
+        if (flag & Underlying(BufferTypeBits::TRANSFER_SRC)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        if (flag & Underlying(BufferTypeBits::TRANSFER_DST)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         return flags;
     };
+
+    VmaAllocationCreateFlags VulkanMemoryUsageFlags(MemoryUsageStrategy strategy) {
+        switch (strategy) {
+            case MemoryUsageStrategy::GPU_ONLY:
+                return 0;
+            case MemoryUsageStrategy::CPU_TO_GPU:
+                return VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                       VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT;
+            default:
+                return VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+        }
+    }
 }
 
 
-VulkanBuffer::VulkanBuffer(VulkanDevice& device) : device(device)
+VulkanBuffer::VulkanBuffer(VulkanDevice* device) : device(device)
 {
 }
 
 VulkanBuffer::~VulkanBuffer()
 {
+    VulkanBuffer::Terminate();
 }
+
+VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept :
+device(other.device),
+buffer(other.buffer),
+allocation(other.allocation),
+mappedData(other.mappedData)
+{
+    other.buffer = VK_NULL_HANDLE;
+    other.allocation = VK_NULL_HANDLE;
+    other.mappedData = nullptr;
+}
+
+VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept
+{
+    if (this != &other)
+    {
+        Terminate();
+
+        device = other.device;
+        buffer = other.buffer;
+        allocation = other.allocation;
+        mappedData = other.mappedData;
+
+        other.buffer = VK_NULL_HANDLE;
+        other.allocation = VK_NULL_HANDLE;
+        other.mappedData = nullptr;
+    }
+    return *this;
+}
+
 
 bool VulkanBuffer::Initialize(BufferDesc desc)
 {
@@ -43,15 +87,12 @@ bool VulkanBuffer::Initialize(BufferDesc desc)
         .sharingMode = desc.sharingMode == SharingMode::EXCLUSIVE ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT
     };
 
-    //TODO: add a flag on the descriptor for this
     VmaAllocationCreateInfo vmaAllocationCreateInfo = {
-        .flags =  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT |
-        VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .flags =  VulkanMemoryUsageFlags(desc.memoryUsageStrategy),
         .usage = VMA_MEMORY_USAGE_AUTO
     };
 
-    VkResult result = vmaCreateBuffer(device.GetAllocator(), &bufferCreateInfo, &vmaAllocationCreateInfo, &buffer, &allocation, nullptr);
+    VkResult result = vmaCreateBuffer(device->GetAllocator(), &bufferCreateInfo, &vmaAllocationCreateInfo, &buffer, &allocation, nullptr);
     if (result != VK_SUCCESS)
     {
         // buffer failed to init
@@ -64,14 +105,39 @@ bool VulkanBuffer::Initialize(BufferDesc desc)
 
 void VulkanBuffer::Terminate()
 {
-    vmaDestroyBuffer(device.GetAllocator(), buffer, allocation);
+    if (buffer != VK_NULL_HANDLE)
+    {
+        vmaDestroyBuffer(device->GetAllocator(), buffer, allocation);
+        buffer = VK_NULL_HANDLE;
+        allocation = VK_NULL_HANDLE;
+        mappedData = nullptr;
+    }
 }
 
-void VulkanBuffer::CopyData(const void* data, uint64 size, uint64 offset)
+void VulkanBuffer::Map()
 {
-    void* mappedData;
-    vmaMapMemory(device.GetAllocator(), allocation, &mappedData);
-    memcpy(mappedData, data, size);
+    if (mappedData != nullptr)
+    {
+        spdlog::warn("VulkanBuffer: Buffer is already mapped");
+        return;
+    }
 
-    vmaUnmapMemory(device.GetAllocator(), allocation);
+    vmaMapMemory(device->GetAllocator(), allocation, &mappedData);
+}
+
+void VulkanBuffer::Unmap()
+{
+    if (mappedData == nullptr)
+    {
+        spdlog::warn("VulkanBuffer: Buffer is not mapped");
+        return;
+    }
+
+    vmaUnmapMemory(device->GetAllocator(), allocation);
+    mappedData = nullptr;
+}
+
+VkBuffer VulkanBuffer::GetVkBuffer() const
+{
+    return buffer;
 }

@@ -14,13 +14,6 @@ void TVector4<Type>::Print() const
 }
 
 //Constructors
-template <typename Type>
-inline TVector4<Type>::TVector4() : X(0), Y(0), Z(0), W(0)
-{}
-
-template <typename Type>
-inline TVector4<Type>::TVector4(const TVector4<Type> & inVec4) : X(inVec4.X), Y(inVec4.Y), Z(inVec4.Z), W(inVec4.W)
-{}
 
 template <typename Type>
 TVector4<Type>::TVector4(const double* Other)
@@ -219,16 +212,16 @@ inline TVector4<Type> TVector4<Type>::operator/(const Type Scalar) const
 	return TVector4<Type>(X / Scalar, Y / Scalar, Z / Scalar, W / Scalar);
 }
 
-template <typename Type>
-inline TVector4<Type> & TVector4<Type>::operator=(const TVector4<Type>& Other)
-{
-	X = Other.X;
-	Y = Other.Y;
-	Z = Other.Z;
-	W = Other.W;
-
-	return *this;
-}
+// template <typename Type>
+// inline TVector4<Type> & TVector4<Type>::operator=(const TVector4<Type>& Other)
+// {
+// 	X = Other.X;
+// 	Y = Other.Y;
+// 	Z = Other.Z;
+// 	W = Other.W;
+//
+// 	return *this;
+// }
 
 template <typename Type>
 inline bool TVector4<Type>::operator==(const TVector4<Type>& Other) const

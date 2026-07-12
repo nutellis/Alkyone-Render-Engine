@@ -32,13 +32,13 @@ public:
     Vertex(Float3 Pos);
     Vertex(Float3 Pos, Float3 Norm, Float2 UV);
 
-    Vertex(const Vertex& Other);
-
-    Vertex(Vertex&& Other) noexcept;
-
-    Vertex& operator=(const Vertex& Other);
-
-    Vertex& operator=( Vertex&& Other) noexcept ;
+    // Vertex(const Vertex& Other);
+    //
+    // Vertex(Vertex&& Other) noexcept;
+    //
+    // Vertex& operator=(const Vertex& Other);
+    //
+    // Vertex& operator=(Vertex&& Other) noexcept ;
 
     bool operator==(const Vertex& other) const;
 };

@@ -18,13 +18,13 @@ public:
 	};
 
 public:
-	TVector4();
+	TVector4() = default;
+	~TVector4() = default;
+	TVector4(const TVector4 & inVec4) = default;
 
 	TVector4(const Type inX, const Type inY, const Type inZ,const Type inW);
 
 	TVector4(const Type inX, const Type inY, const Type inZ);
-
-	TVector4(const TVector4 & inVec4);
 
 	TVector4(const double* Other);
 
@@ -91,7 +91,7 @@ public:
 	Type Dot(const TVector4 & Other) const;
 	Type Dot(const TVector4 & A, const TVector4 & B);
 
-	TVector4& operator=(const TVector4& Other);
+	TVector4& operator=(const TVector4& Other) = default;
 
 	bool operator==(const TVector4& Other) const;
 	bool operator!=(const TVector4& Other) const;

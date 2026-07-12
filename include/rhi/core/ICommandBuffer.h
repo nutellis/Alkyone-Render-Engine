@@ -15,6 +15,18 @@ enum CommandBufferLevel
     COMMAND_BUFFER_LEVEL_SECONDARY = 1 // VK_COMMAND_BUFFER_LEVEL_SECONDARY | D3D12_COMMAND_LIST_TYPE_BUNDLE
 };
 
+struct CopyRequest
+{
+    Handle src;
+    Handle dst;
+    struct CopyRegion
+    {
+        uint64 srcOffset;
+        uint64 dstOffset;
+        uint64 size;
+    } region;
+};
+
 
 class ICommandBuffer
 {

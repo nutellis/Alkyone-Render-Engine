@@ -7,11 +7,8 @@
 
 #include <string>
 #include <unordered_map>
-#include <any>
-#include <ctime>
 #include "Resource.h"
-#include "mesh/GLTFImporter.h"
-#include "scene/Scene.h"
+#include <containers/SlotMap.h>
 
 /*
 * It starts with external code asking for a particular resource, like the coin texture.
@@ -22,29 +19,38 @@
 * (either immediately, or when instructed to do so).
 */
 
+class DynamicRHI;
+class MeshGroup;
+struct GPUMesh;
+
 class ResourceManager
 {
 
+public:
+    ResourceManager() = delete;
+
+    explicit ResourceManager(DynamicRHI& rhi);
+    ~ResourceManager();
+
+    bool Initialize();
+    void Terminate();
+
+    void UploadMeshes(std::vector<MeshGroup>& meshGroups);
+    
+
+
 private:
+    DynamicRHI& rhi;
+
     std::unordered_map<std::string, ResourceHandle<void>> resourceCache;
 
-    SlotMap<Mesh> meshRegistry;
-    SlotMap<Scene> SceneRegistry;
+    SlotMap<GPUMesh> meshRegistry;
+    //SlotMap<Scene> SceneRegistry;
     //SlotMap<Texture> textureRegistry;
-    SlotMap<Material> materialRegistry;
+    //SlotMap<Material> materialRegistry;
 
-uint32 refCount = 0;
+    uint32 refCount = 0;
 
-public:
-    template<typename T>
-    ResourceHandle<T> GetResource(const std::string& resourcePath, ResourceType resourceType)
-    {
-        //we check if the resource exists
-        if (resourceCache.contains(resourcePath))
-        {
-            return std::any_cast<ResourceHandle<T>>(resourceCache[resourcePath]);
-        }
-    }
 };
 
 

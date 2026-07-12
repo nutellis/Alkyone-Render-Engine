@@ -17,17 +17,29 @@ class VulkanBuffer : public IBuffer
 {
 public:
     VulkanBuffer() = delete;
-    VulkanBuffer(VulkanDevice& device);
+    VulkanBuffer(VulkanDevice* device);
     ~VulkanBuffer() override;
+
+    // no copy!
+    VulkanBuffer(const VulkanBuffer& other) = delete;
+    VulkanBuffer operator=(const VulkanBuffer& other) = delete;
+
+    //yes move!!
+    VulkanBuffer(VulkanBuffer&& other) noexcept;
+    VulkanBuffer& operator=(VulkanBuffer&& other) noexcept;
 
     bool Initialize(BufferDesc desc) override;
 
     void Terminate() override;
+    void Map() override;
+    void Unmap() override;
 
+    VkBuffer GetVkBuffer() const;
 
-    void CopyData(const void* data, uint64 size, uint64 offset) override;
+private:
+    VulkanDevice * device;
 
-    VulkanDevice & device;
+    void * mappedData = nullptr;
 
     VkBuffer buffer = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;

@@ -4,9 +4,9 @@
 
 #include "../../include/resources/AssetRegistry.h"
 
-#include <rendering/Mesh.h>
+#include <../../include/rendering/object/Mesh.h>
 
-#include "../../include/resources/mesh/GLTFImporter.h"
+#include "../../include/resources/GLTFImporter.h"
 
 AssetRegistry::AssetRegistry()
 {

@@ -73,8 +73,13 @@ ICommandBuffer* VulkanCommandPool::AllocateCommandBuffer(CommandBufferLevel buff
     return commandBuffer;
 }
 
-VulkanCommandBuffer* VulkanCommandPool::GetCommandBuffer() const
+VulkanCommandBuffer& VulkanCommandPool::GetCommandBuffer() const
 {
-    return commandBuffer;
+    return *commandBuffer;
+}
+
+VkCommandPool VulkanCommandPool::GetVkCommandPool() const
+{
+    return commandPool;
 }
 

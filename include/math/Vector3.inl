@@ -9,23 +9,6 @@ const TVector3<Type> TVector3<Type>::ONE(1.0f, 1.0f, 1.0f);
 
 //Constructors
 
-
-template <typename Type>
-inline TVector3<Type>::TVector3() : X(0), Y(0), Z(0)
-{}
-
-template <typename Type>
-inline TVector3<Type>::~TVector3()
-{
-	//X.~Type();
-	//Y.~Type();
-	//Z.~Type();
-}
-
-template <typename Type>
-inline TVector3<Type>::TVector3(const TVector3 & inVec3) : X(inVec3.X), Y(inVec3.Y), Z(inVec3.Z)
-{}
-
 template <typename Type>
 inline TVector3<Type>::TVector3(const Type inX, const Type inY, const Type inZ) : X(inX), Y(inY), Z(inZ)
 {}
@@ -213,15 +196,15 @@ inline TVector3<Type>& TVector3<Type>::operator-=(const TVector3<Type>& Other)
 	return *this;
 }
 
-template <typename Type>
-inline TVector3<Type> & TVector3<Type>::operator=(const TVector3<Type>& Other)
-{
-	this->X = Other.X;
-	this->Y = Other.Y;
-	this->Z = Other.Z;
-
-	return *this;
-}
+// template <typename Type>
+// inline TVector3<Type> & TVector3<Type>::operator=(const TVector3<Type>& Other)
+// {
+// 	this->X = Other.X;
+// 	this->Y = Other.Y;
+// 	this->Z = Other.Z;
+//
+// 	return *this;
+// }
 
 template <typename Type>
 inline bool TVector3<Type>::operator==(const TVector3<Type>& Other) const

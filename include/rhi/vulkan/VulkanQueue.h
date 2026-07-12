@@ -5,7 +5,7 @@
 #ifndef ALKYONERENDERENGINE_VULKANCOMMANDQUEUE_H
 #define ALKYONERENDERENGINE_VULKANCOMMANDQUEUE_H
 
-#include <array>
+#include <vector>
 
 #include "rhi/core/ICommandQueue.h"
 
@@ -27,14 +27,14 @@ public:
     ~VulkanQueue() override;
 
 
-    bool Initialize() override;
+    bool Initialize(size_t poolSize) override;
     void Terminate() override;
 
     VkQueue GetVkQueue();
     VkQueueFlags GetVkQueueFlags() const;
     uint32 GetFamilyIndex() const;
 
-    VulkanCommandPool* GetCommandPool(uint32 frameIndex);
+    VulkanCommandPool* GetCommandPool(uint32 index);
 
     void AllocateCommandBuffers(uint32 count) override;
     void SubmitCommandBuffer(IFrameSync& sync, ICommandBuffer& cmdBuffer) override;
@@ -48,7 +48,7 @@ private:
 
     VkQueueFlags queueType{};
 
-    std::array<VulkanCommandPool*, FRAMES_IN_FLIGHT> pools;
+    std::vector<VulkanCommandPool*> pools;
 
 };
 

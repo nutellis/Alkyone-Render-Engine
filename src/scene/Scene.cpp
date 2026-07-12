@@ -4,16 +4,16 @@
 
 #include <scene/Scene.h>
 
-#include "../../include/resources/mesh/GLTFImporter.h"
+#include "resources/GLTFImporter.h"
 
-RenderObjectHandle Scene::AddRenderObject(RenderObject& object)
+SceneObjectHandle Scene::AddSceneObject(SceneObject& object)
 {
-    renderObjects.push_back(object);
-    Handle id = Handle(1, static_cast<uint32>(renderObjects.size() - 1));
-    return RenderObjectHandle{id};
+    // renderObjects.push_back(object);
+    // Handle id = Handle(1, static_cast<uint32>(renderObjects.size() - 1));
+    return SceneObjectHandle{Handle(1, static_cast<uint32>(objects.size()))};
 }
 
-void Scene::RemoveRenderObject(RenderObjectHandle renderObjectHandle)
+void Scene::RemoveRenderObject(SceneObjectHandle renderObjectHandle)
 {
 }
 

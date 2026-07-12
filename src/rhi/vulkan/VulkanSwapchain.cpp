@@ -4,6 +4,7 @@
 
 #include <rhi/vulkan/VulkanSwapchain.h>
 
+#include "core/ApplicationWindow.h"
 #include "rhi/vulkan/VulkanDevice.h"
 #include "rhi/vulkan/VulkanFrameSync.h"
 #include "rhi/vulkan/VulkanQueue.h"

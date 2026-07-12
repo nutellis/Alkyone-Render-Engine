@@ -7,33 +7,32 @@
 #include <core/ApplicationWindow.h>
 #include <GLFW/glfw3.h>
 
-#include "rendering/Mesh.h"
-#include <rhi/descriptors/CommandPoolDesc.h>
 #include <rhi/descriptors/GraphicsPipelineDesc.h>
 
-#include "glm/vec2.hpp"
-#include "glm/vec3.hpp"
-#include "rhi/core/IFrameSync.h"
 #include "rhi/core/barriers/ImageBarrier.h"
 #include "spdlog/spdlog.h"
-#include "../../include/resources/mesh/GLTFImporter.h"
+#include "resources/GLTFImporter.h"
 
 #include <utilities/TypeUtilities.h>
 
+#include "resources/ResourceManager.h"
+
 AlkyoneRenderEngine::AlkyoneRenderEngine():
-window(nullptr),
-rhi(nullptr),
-shaderManager(nullptr),
-sceneManager(nullptr)
+    window(nullptr),
+    rhi(nullptr),
+    shaderManager(nullptr),
+    resourceManager(nullptr),
+    sceneManager(nullptr)
 {
 }
 
 AlkyoneRenderEngine::~AlkyoneRenderEngine()
 {
-    delete window;
-    delete rhi;
-    delete shaderManager;
     delete sceneManager;
+    delete resourceManager;
+    delete shaderManager;
+    delete rhi;
+    delete window;
 }
 
 bool AlkyoneRenderEngine::Initialize()
@@ -61,22 +60,30 @@ bool AlkyoneRenderEngine::Initialize()
     sceneManager = new SceneManager();
     sceneManager->Initialize();
 
+    resourceManager = new ResourceManager(*rhi);
+    resourceManager->Initialize();
+
     return true;
 }
 
-void AlkyoneRenderEngine::Terminate()
+void AlkyoneRenderEngine::Terminate() const
 {
     sceneManager->Terminate();
+
+    resourceManager->Terminate();
     //shaderManager->Terminate();
     rhi->Terminate();
     window->Terminate();
     glfwTerminate();
 }
-void AlkyoneRenderEngine::Run()
+void AlkyoneRenderEngine::Run() const
 {
-    //test GLFT loader
+    std::string filename = std::string("../assets/chess/chess_set_1k.gltf");
+    ParsedData sceneData = GLTFImporter::ImportSceneFile(filename);
 
-    //RenderObject * object = new RenderObject();
+    resourceManager->UploadMeshes(sceneData.sceneMeshes);
+    sceneManager->SetupSceneHierarchy(sceneData);
+
 
     Slang::ComPtr<slang::IModule> slangModule{ shaderManager->slangSession->loadModuleFromSource("triangle", "../shaders/triangle.slang", nullptr, nullptr) };
 
@@ -94,10 +101,6 @@ void AlkyoneRenderEngine::Run()
     desc.frontFace = FRONT_FACE_CLOCKWISE;
 
     rhi->CreatePipeline(desc);
-
-    std::string filename = std::string("../assets/chess/chess_set_1k.gltf");
-    GLTFImporter::ImportSceneFile(filename, *sceneManager);
-    MeshGroup* meshgroup = new MeshGroup();
 
 
     while (!glfwWindowShouldClose(window->windowHandle)) {
@@ -134,7 +137,7 @@ void AlkyoneRenderEngine::Run()
 
         rhi->BindPipeline(0);
 
-        rhi->PrepareVertexBuffer(*meshgroup->meshLodGroups[0]);
+        //rhi->PrepareVertexBuffer(*meshgroup);
 
 
         //rhi->SetViewport(0, 0, window->GetWidth(), window->GetHeight());
@@ -161,6 +164,4 @@ void AlkyoneRenderEngine::Run()
         rhi->EndFrame();
     }
     rhi->WaitIdle();
-
-    meshgroup->Terminate();
 }

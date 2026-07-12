@@ -22,7 +22,7 @@ public:
     ICommandQueue() = default;
     virtual ~ICommandQueue() = default;
 
-    virtual bool Initialize() = 0;
+    virtual bool Initialize(size_t poolSize) = 0;
     virtual void Terminate() = 0;
 
     virtual void AllocateCommandBuffers(uint32 count) = 0;

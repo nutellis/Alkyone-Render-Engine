@@ -12,11 +12,10 @@
 
 #include <vector>
 
-#include "VulkanDevice.h"
-#include "VulkanSurface.h"
-#include "VulkanSwapchain.h"
+#include "containers/SlotMap.h"
 #include "math/Vector3.h"
 
+class VulkanBuffer;
 class VulkanFrameSync;
 class VulkanCommandBuffer;
 class VulkanDevice;
@@ -44,6 +43,14 @@ public:
     VkInstance GetInstance() const;
 
     void Validate() override;
+
+    //Buffers
+    Handle CreateBuffer(BufferDesc desc) override;
+    IBuffer* GetBuffer(Handle handle) override;
+    CopyRequest RecordCopyBuffer(Handle src, Handle dst, uint64 size) override;
+    void SubmitCopyBuffer(std::vector<CopyRequest> copyRequests) override;
+    void DestroyBuffer(Handle handle) override;
+
     //Drawing
     bool BeginFrame() override;
     void EndFrame() override;
@@ -51,7 +58,8 @@ public:
     void BeginRendering() override;
     void EndRendering() override;
     void BindPipeline(uint32_t pipelineID) override;
-    void PrepareVertexBuffer(Mesh& mesh) override;
+    void PrepareVertexBuffer(Handle meshHandle);
+    // void PrepareVertexBuffer(Mesh& mesh) override;
 
     void PrepareVertexBuffer(uint32_t bufferID) override;
     void BindIndexBuffer(uint32_t bufferID) override;
@@ -75,11 +83,13 @@ private:
     VulkanFrameSync* frameSync = nullptr;
 
     //pipelines
-    std::vector<VulkanGraphicsPipeline *> pipelineStorage;
+    std::vector<VulkanGraphicsPipeline> pipelineStorage;
     std::unordered_map<size_t, uint32> pipelineCache;
 
     //command buffer used at the moment
     VulkanCommandBuffer * cmd = nullptr;
+
+    SlotMap<VulkanBuffer> buffers;
 };
 
 

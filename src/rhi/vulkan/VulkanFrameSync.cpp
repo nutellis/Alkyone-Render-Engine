@@ -5,6 +5,7 @@
 #include <rhi/vulkan/VulkanFrameSync.h>
 #include <rhi/vulkan/VulkanCommandPool.h>
 
+#include "rhi/vulkan/VulkanSwapchain.h"
 #include "spdlog/spdlog.h"
 
 VulkanFrameSync::VulkanFrameSync(VulkanDevice& device, VulkanSwapchain& swapchain) : device(device), swapchain(swapchain)

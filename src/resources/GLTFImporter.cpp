@@ -7,7 +7,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
 
-#include "../../../include/resources/mesh/GLTFImporter.h"
+#include "resources/GLTFImporter.h"
 
 #include <iostream>
 
@@ -16,20 +16,18 @@
 #include <core/PODTypes.h>
 
 #include "math/ParabolaMath.h"
-#include "rendering/Mesh.h"
-#include "rendering/MeshGroup.h"
-#include "rhi/core/IBuffer.h"
-#include "scene/RenderObject.h"
-#include "scene/SceneManager.h"
+#include "rendering/object/Mesh.h"
+#include "rendering/object/MeshGroup.h"
 
 
-bool GLTFImporter::ImportSceneFile(const std::string& filename, SceneManager& sceneManager /*, ResourceManager& resourceManager*/)
+ParsedData GLTFImporter::ImportSceneFile(const std::string& filename)
 {
     tinygltf::TinyGLTF loader {};
     tinygltf::Model gltf {};
     std::string err;
     std::string warn;
 
+    ParsedData result = {};
 
     //bool ret = loader.LoadBinaryFromFile(&gltf, &err, &warn, filename.c_str());
     bool ret = loader.LoadASCIIFromFile(&gltf, &err, &warn, filename.c_str());
@@ -48,21 +46,20 @@ bool GLTFImporter::ImportSceneFile(const std::string& filename, SceneManager& sc
         printf("Failed to parse glTF: %s\n", filename.c_str());
     }
 
+     if (ret)
+     {
+         result = ProcessScenes(gltf);
+     }
 
-    //ret += PopulateMeshGroup(gltfModel, meshGroup);
-
-    ret = ProcessScenes(gltf
-        ,sceneManager/*,resourceManager*/);
-    return ret;
-
-
+    return result;
 }
 
-bool GLTFImporter::ProcessScenes(const tinygltf::Model& gltf, SceneManager& sceneManager /*, ResourceManager& resourceManager*/)
+ParsedData GLTFImporter::ProcessScenes(const tinygltf::Model& gltf)
 {
+    ParsedData result = {};
     if (gltf.scenes.empty()) {
         spdlog::error("No scenes found in glTF file");
-        return false;
+        return result;
     }
 
     const std::vector<tinygltf::Node>& nodes = gltf.nodes;
@@ -70,7 +67,6 @@ bool GLTFImporter::ProcessScenes(const tinygltf::Model& gltf, SceneManager& scen
     // do work on all scenes
      for (const auto& scene : gltf.scenes)
      {
-        Scene* activeScene = sceneManager.GetScene(sceneManager.CreateScene()); // questionable approach...
         std::vector<size_t> stackIndices;
 
         std::vector<uint32> indexToHandleMap = std::vector<uint32>(
@@ -78,29 +74,21 @@ bool GLTFImporter::ProcessScenes(const tinygltf::Model& gltf, SceneManager& scen
         std::vector<size_t> gltfSourceIndices;
 
          //init arrays
-         const size_t estimatedNodes = nodes.size();
+        result.flatHierarchy.reserve(nodes.size());
+        result.sceneMeshes.reserve(gltf.meshes.size());
 
-         //move this inside scene or scenemanager
-         activeScene->renderObjects.reserve(estimatedNodes + 1);
-         activeScene->transforms.reserve(estimatedNodes + 1);
-         activeScene->names.reserve(estimatedNodes + 1);
-         activeScene->dirty.reserve(estimatedNodes + 1);
-         activeScene->types.reserve(estimatedNodes + 1);
-         activeScene->meshIndices.reserve(estimatedNodes + 1);
-
-        //set root
-        RenderObject rootObject {};
-        activeScene->renderObjects.push_back(rootObject);
-        activeScene->transforms.push_back(Matrix4f::IDENTITY);
-        activeScene->names.emplace_back("Root");
-        activeScene->dirty.push_back(false);
-        activeScene->types.push_back(ObjectType::ROOT);
-        activeScene->meshIndices.push_back(0xFFFFFF);
-
-         RenderObjectHandle rootHandle = RenderObjectHandle{
-             Handle(1, 0)
+         SceneNode root = {
+             .transform = Matrix4f::IDENTITY,
+             .name = "Root",
+             .type = 0, //root
+             .dirty = false,
+             .gltfMeshIndex = -1,
+             .parent = Handle {0, 0xFFFFFFFF},
+             .firstChild = Handle {0, 0xFFFFFFFF},
+             .nextSibling = Handle {0, 0xFFFFFFFF}
          };
 
+         result.flatHierarchy.push_back(root);
 
         stackIndices.insert(stackIndices.end(), scene.nodes.rbegin(), scene.nodes.rend());
 
@@ -110,40 +98,40 @@ bool GLTFImporter::ProcessScenes(const tinygltf::Model& gltf, SceneManager& scen
             stackIndices.pop_back();
             const tinygltf::Node& currentNode = nodes[stackIndex]; //current node
 
-            RenderObject currentObject {};
-
-            indexToHandleMap[stackIndex] = static_cast<uint32>(activeScene->renderObjects.size());
+            indexToHandleMap[stackIndex] = static_cast<uint32>(result.flatHierarchy.size());
             gltfSourceIndices.push_back(stackIndex);
 
-            activeScene->renderObjects.push_back(currentObject);
-            activeScene->transforms.push_back(ProcessTransform(currentNode));
-            activeScene->names.push_back(currentNode.name);
-            activeScene->dirty.push_back(false);
-            activeScene->meshIndices.push_back(0xFFFFF);
-
+            SceneNode parsedNode {
+                .transform = ProcessTransform(currentNode),
+                .name = currentNode.name,
+                .type = 7, //unknown
+                .dirty = false,
+                .gltfMeshIndex = currentNode.mesh,
+                .parent = Handle {0, 0xFFFFFFFF},
+                .firstChild = Handle {0, 0xFFFFFFFF},
+                .nextSibling = Handle {0, 0xFFFFFFFF}
+            };
             if (currentNode.mesh > -1)
             {
-                activeScene->types.push_back(ObjectType::MESHGROUP);
+                parsedNode.type = 6;
                 //found a mesh, we should fetch the info
-               // activeScene->meshIndices.back() = GetMeshData(gltf, currentNode.mesh);
+                result.sceneMeshes.push_back(ProcessMeshData(gltf, currentNode.mesh));
             }
             else if (currentNode.camera > -1)
             {
-                activeScene->types.push_back(ObjectType::CAMERA);
+                parsedNode.type = 5;
             }
             else if (currentNode.light > -1)
             {
-                auto lightType = gltf.lights[currentNode.light].type == "point" ? ObjectType::POINT_LIGHT : ObjectType::SPOT_LIGHT;
-                activeScene->types.push_back(lightType);
+                auto lightType = gltf.lights[currentNode.light].type == "point" ? 2 : 3;
+                 parsedNode.type = lightType;
             }
             else if (currentNode.children.empty() == false)
             {
-                activeScene->types.push_back(ObjectType::TRANSFORM);
+                parsedNode.type = 1;
             }
-            else
-            {
-                activeScene->types.push_back(ObjectType::UNKNOWN);
-            }
+
+            result.flatHierarchy.push_back(parsedNode);
 
             stackIndices.insert(stackIndices.end(),
                 currentNode.children.rbegin(),
@@ -151,47 +139,47 @@ bool GLTFImporter::ProcessScenes(const tinygltf::Model& gltf, SceneManager& scen
                 );
         }
 
-        RenderObjectHandle currentHandle = RenderObjectHandle{Handle(1,  0)};
-        RenderObjectHandle previousSiblingHandle = RenderObjectHandle{Handle(1, 0xFFFFFFFF)};
+        Handle currentHandle = Handle(1,  0);
+        Handle previousSiblingHandle = Handle(1, 0xFFFFFFFF);
         for (int32 i =  static_cast<int32>(scene.nodes.size()) - 1; i >= 0; i--)
         {
             size_t childGltfIndex = scene.nodes[i];
-            RenderObjectHandle childHandle = RenderObjectHandle{Handle(1,  indexToHandleMap[childGltfIndex])};
+            Handle childHandle = Handle(1,  indexToHandleMap[childGltfIndex]);
 
-            activeScene->renderObjects[indexToHandleMap[childGltfIndex]].parent = currentHandle;
+            result.flatHierarchy[indexToHandleMap[childGltfIndex]].parent = currentHandle;
 
             if (i == 0)
             {
-                activeScene->renderObjects[0].firstChild = childHandle;
+                result.flatHierarchy[0].firstChild = childHandle;
             } else
             {
-                activeScene->renderObjects[indexToHandleMap[childGltfIndex]].nextSibling = previousSiblingHandle;
+                result.flatHierarchy[indexToHandleMap[childGltfIndex]].nextSibling = previousSiblingHandle;
 
             }
             previousSiblingHandle = childHandle;
         }
 
-        for (size_t i = 1; i < activeScene->renderObjects.size(); i++)
+        for (size_t i = 1; i < result.flatHierarchy.size() - 1; i++)
         {
             const tinygltf::Node& node = nodes[gltfSourceIndices[i - 1]];
 
-            currentHandle = RenderObjectHandle{Handle(1,  indexToHandleMap[i - 1])};
-            previousSiblingHandle = RenderObjectHandle{Handle(1, 0xFFFFFFFF)};
+            currentHandle = Handle(1,  indexToHandleMap[i]);
+            previousSiblingHandle = Handle(1, 0xFFFFFFFF);
 
 
             for (int32 j =  static_cast<int32>(node.children.size()) - 1; j >= 0; j--)
             {
                 size_t childGltfIndex = node.children[j];
-                RenderObjectHandle childHandle = RenderObjectHandle{Handle(1,  indexToHandleMap[childGltfIndex])};
+               Handle childHandle = Handle(1,  indexToHandleMap[childGltfIndex]);
 
-                activeScene->renderObjects[indexToHandleMap[childGltfIndex]].parent = currentHandle;
+                result.flatHierarchy[indexToHandleMap[childGltfIndex]].parent = currentHandle;
 
                 if (j == 0)
                 {
-                    activeScene->renderObjects[i].firstChild = childHandle;
+                    result.flatHierarchy[i].firstChild = childHandle;
                 } else
                 {
-                    activeScene->renderObjects[indexToHandleMap[childGltfIndex]].nextSibling = previousSiblingHandle;
+                    result.flatHierarchy[indexToHandleMap[childGltfIndex]].nextSibling = previousSiblingHandle;
 
                 }
                 previousSiblingHandle = childHandle;
@@ -199,52 +187,39 @@ bool GLTFImporter::ProcessScenes(const tinygltf::Model& gltf, SceneManager& scen
         }
          spdlog::info("Finished processing scene");
      }
-    return true;
+    return result;
 }
 
-bool GLTFImporter::GetMeshData(const tinygltf::Model& gltf, size_t meshIndex /*, SceneManager& sceneManager*/)
+MeshGroup GLTFImporter::ProcessMeshData(const tinygltf::Model& gltf, size_t meshIndex)
 {
     const std::vector<tinygltf::Mesh> meshes = gltf.meshes;
     //MESH
-    tinygltf::Mesh mesh = meshes[meshIndex];
-    for (tinygltf::Primitive& primitive : mesh.primitives)
+    const tinygltf::Mesh mesh = meshes[meshIndex];
+
+    //create a new MeshGroup
+    MeshGroup meshGroup = {};
+    meshGroup.subMeshes.reserve(mesh.primitives.size());
+    for (const tinygltf::Primitive& primitive : mesh.primitives)
     {
-        // here is the place where the AssetRegistry comes in play
+        Mesh meshPrimitive = {};
 
-        //create a new Mesh
-        Mesh * meshPrimitive = new Mesh();
-        size_t primitiveStartIndex = 0;
-        size_t indexCount = 0;
-        size_t vertexStart = 0;
+        GetVertices(gltf, primitive, meshGroup.vertices);
 
-        std::vector<uint32> indices {};
-        std::vector<Vertex> vertices {};
+        GetIndices(gltf, primitive,meshGroup.indices);
 
+        meshPrimitive.firstIndex = meshGroup.indices.size();
+        meshPrimitive.indexCount = gltf.accessors[primitive.indices].count;
+        meshPrimitive.vertexOffset = meshGroup.vertices.size();
+        meshPrimitive.indexBufferOffset = static_cast<uint32>(meshGroup.vertices.size() * sizeof(Vertex));
+        meshPrimitive.materialIndex = primitive.material;
 
-        vertexStart = vertices.size();
+        meshGroup.subMeshes.push_back(meshPrimitive);
 
-
-        GetVertices(gltf, primitive, vertices);
-        // here we say: if the last primitive had X indices, the next one will be saved on size + 1.
-        primitiveStartIndex = indices.size();
-
-
-        indexCount += gltf.accessors[primitive.indices].count;
-        //  indices.Resize(indexCount);
-        GetIndices(gltf, primitive,vertexStart,indices);
-
-        meshPrimitive->firstIndex = primitiveStartIndex;
-        meshPrimitive->indexCount = indexCount;
-        meshPrimitive->vertices = vertices;
-        meshPrimitive->indices = indices;
-
-        // push the mesh to the AssetRegistry and get a handle back
-        //meshPrimitive->handle = resourceManager.AddMesh(*meshPrimitive);
-
-        spdlog::info("Finished processing mesh {}", meshPrimitive->firstIndex);
+        spdlog::info("Finished processing primitive. firstIndex: {}, vertexOffset: {}",
+                 meshPrimitive.firstIndex, meshPrimitive.vertexOffset);
     }
 
-    return true;
+    return meshGroup;
 }
 
 
@@ -285,58 +260,6 @@ Matrix4f GLTFImporter::ProcessTransform(tinygltf::Node node)
 
         return T * R * S;
     }
-}
-
-bool GLTFImporter::ProcessMesh(tinygltf::Mesh mesh)
-{
-    return false;
-}
-
-
-
-bool GLTFImporter::PopulateMeshGroup(tinygltf::Model gltfModel, MeshGroup& meshgroup)
-{
-    tinygltf::Mesh mesh = gltfModel.meshes[0];
-
-    size_t primitiveStartIndex = 0;
-    size_t indexCount = 0;
-    size_t vertexStart = 0;
-
-    std::vector<uint32> indices {};
-    std::vector<Vertex> vertices {};
-
-
-    //equivalents:
-    //  tinygltf::Mesh == MeshGroup
-    //  tinygltf::Primitive == Mesh
-
-    //for each primitive inside the mesh
-    for (tinygltf::Primitive& primitive : mesh.primitives)
-    {
-        //create a new Mesh
-        Mesh * meshPrimitive = new Mesh();
-
-        vertexStart = vertices.size();
-
-        GetVertices(gltfModel, primitive, vertices);
-        // here we say: if the last primitive had X indices, the next one will be saved on size + 1.
-        primitiveStartIndex = indices.size();
-
-
-        indexCount += gltfModel.accessors[primitive.indices].count;
-      //  indices.Resize(indexCount);
-        GetIndices(gltfModel, primitive,vertexStart,indices);
-
-        meshPrimitive->firstIndex = primitiveStartIndex;
-        meshPrimitive->indexCount = indexCount;
-        meshPrimitive->vertices = vertices;
-        meshPrimitive->indices = indices;
-
-
-        meshgroup.meshLodGroups.PushBack(meshPrimitive);
-    }
-
-    return true;
 }
 
 
@@ -423,7 +346,7 @@ void GLTFImporter::GetVertices(const tinygltf::Model model, const tinygltf::Prim
 }
 
 
-void GLTFImporter::GetIndices(const tinygltf::Model model, const tinygltf::Primitive& primitive, uint32 padding, std::vector<uint32>& indices) {
+void GLTFImporter::GetIndices(const tinygltf::Model model, const tinygltf::Primitive& primitive, std::vector<uint32>& indices) {
     //indices
     const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
     const tinygltf::BufferView& bufferView = model.bufferViews[indexAccessor.bufferView];
@@ -440,7 +363,7 @@ void GLTFImporter::GetIndices(const tinygltf::Model model, const tinygltf::Primi
             const uint32* buf = reinterpret_cast<const uint32*>(&buffer.data[bufferView.byteOffset + indexAccessor.byteOffset]);
             for (size_t i = 0; i < indexAccessor.count; i++)
             {
-                indices.push_back(buf[i] + padding);
+                indices.push_back(buf[i]);
             }
             break;
         }
@@ -449,7 +372,7 @@ void GLTFImporter::GetIndices(const tinygltf::Model model, const tinygltf::Primi
             const uint16* buf = reinterpret_cast<const uint16*>(&buffer.data[bufferView.byteOffset + indexAccessor.byteOffset]);
             for (size_t i = 0; i < indexAccessor.count; i++)
             {
-                indices.push_back(buf[i] + padding);
+                indices.push_back(buf[i]);
             }
             break;
         }
@@ -457,7 +380,7 @@ void GLTFImporter::GetIndices(const tinygltf::Model model, const tinygltf::Primi
         {
             const uint8 * buf = reinterpret_cast<const uint8*>(&buffer.data[bufferView.byteOffset + indexAccessor.byteOffset]);
             for (size_t i = 0; i < indexAccessor.count; i++) {
-                indices.push_back(buf[i] + padding);
+                indices.push_back(buf[i]);
 
             }
             break;
@@ -467,7 +390,7 @@ void GLTFImporter::GetIndices(const tinygltf::Model model, const tinygltf::Primi
     }
 }
 
-// void GLTFLoader::dbgModel() {
+// void GLTFImporter::dbgModel() {
 //     for (auto &mesh : model.meshes) {
 //         std::cout << "mesh : " << mesh.name << std::endl;
 //         for (auto &primitive : mesh.primitives) {
