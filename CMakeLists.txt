@@ -61,17 +61,14 @@ find_library(Slang_LIBRARY NAMES slang slang-compiler HINTS "$ENV{VULKAN_SDK}/li
 file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 add_executable(AlkyoneRenderer main.cpp ${SRC_FILES}
-        src/scene/Scene.cpp
-        include/scene/Scene.h
-        include/containers/SlotMap.h
-        include/shaders/ShaderManager.cpp
-        include/shaders/ShaderManager.h
-        include/utilities/FileUtilities.h
-        include/rhi/GraphicsPipelineDesc.h
-        include/rhi/IGraphicsPipeline.h
-        src/rhi/vulkan/VulkanGraphicsPipeline.cpp
-        include/rhi/vulkan/VulkanGraphicsPipeline.h
-        include/rhi/vulkan/VulkanDefinitions.h)
+        include/rhi/core/shader/ShaderCursor.h
+        include/rhi/core/shader/ShaderCursor.cpp
+        include/rhi/core/shader/IShaderObject.h
+        include/rhi/core/shader/RHIShader.h
+        include/rhi/vulkan/VulkanShader.h
+        include/rhi/descriptors/ShaderCompileDesc.h
+        include/rhi/vulkan/VulkanBufferTransforms.h
+        include/resources/ResourceHandle.h)
 
 target_compile_options(AlkyoneRenderer
         PRIVATE

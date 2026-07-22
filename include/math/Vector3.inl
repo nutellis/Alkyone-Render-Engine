@@ -9,23 +9,6 @@ const TVector3<Type> TVector3<Type>::ONE(1.0f, 1.0f, 1.0f);
 
 //Constructors
 
-
-template <typename Type>
-inline TVector3<Type>::TVector3() : X(0), Y(0), Z(0)
-{}
-
-template <typename Type>
-inline TVector3<Type>::~TVector3()
-{
-	//X.~Type();
-	//Y.~Type();
-	//Z.~Type();
-}
-
-template <typename Type>
-inline TVector3<Type>::TVector3(const TVector3 & inVec3) : X(inVec3.X), Y(inVec3.Y), Z(inVec3.Z)
-{}
-
 template <typename Type>
 inline TVector3<Type>::TVector3(const Type inX, const Type inY, const Type inZ) : X(inX), Y(inY), Z(inZ)
 {}
@@ -33,6 +16,14 @@ inline TVector3<Type>::TVector3(const Type inX, const Type inY, const Type inZ) 
 template <typename Type>
 inline TVector3<Type>::TVector3(const Type Scalar) : X(Scalar), Y(Scalar), Z(Scalar)
 {}
+
+template <typename Type>
+TVector3<Type>::TVector3(const double* Other)
+{
+	X = static_cast<Type>(Other[0]);
+	Y = static_cast<Type>(Other[1]);
+	Z = static_cast<Type>(Other[2]);
+}
 
 template<typename Type>
 template<typename U>
@@ -175,7 +166,7 @@ inline TVector3<Type> TVector3<Type>::operator*(const TMatrix4<Type>& InMatrix) 
 		Z /= InMatrix.W;
 	}
 
-	return TVector3<T>(X, Y, Z);
+	return TVector3<Type>(X, Y, Z);
 }
 
 template <typename Type>
@@ -205,15 +196,15 @@ inline TVector3<Type>& TVector3<Type>::operator-=(const TVector3<Type>& Other)
 	return *this;
 }
 
-template <typename Type>
-inline TVector3<Type> & TVector3<Type>::operator=(const TVector3<Type>& Other)
-{
-	this->X = Other.X;
-	this->Y = Other.Y;
-	this->Z = Other.Z;
-
-	return *this;
-}
+// template <typename Type>
+// inline TVector3<Type> & TVector3<Type>::operator=(const TVector3<Type>& Other)
+// {
+// 	this->X = Other.X;
+// 	this->Y = Other.Y;
+// 	this->Z = Other.Z;
+//
+// 	return *this;
+// }
 
 template <typename Type>
 inline bool TVector3<Type>::operator==(const TVector3<Type>& Other) const

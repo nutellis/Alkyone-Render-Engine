@@ -2,11 +2,12 @@
 // Created by Nutellis on 20-Jan-26.
 //
 #include "core/ApplicationWindow.h"
+
 #include <GLFW/glfw3.h>
 
 #include "spdlog/spdlog.h"
 
-ARWindow::ARWindow() : windowHandle(nullptr), monitorHandle(nullptr), contextHandle(nullptr), width(0), height(0),
+ARWindow::ARWindow() : windowHandle(nullptr), monitorHandle(nullptr), width(0), height(0),
                        frameCount(0), windowFlags()
 {}
 
@@ -23,13 +24,12 @@ bool ARWindow::Initialize()
 
     //TODO: remove hardcoded. get info from init options json
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+   // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 
     //TODO: remove hardcoded. get info from init options json
     const bool success =
-        CreateWindow("Alkyone Render Engine", 1280, 720, false)
-        && InitializeContext();
+        CreateWindow("Alkyone Render Engine", 1280, 720, false);
 
     if (success == false)
     {
@@ -94,19 +94,19 @@ glfwGetVideoMode(monitorHandle)->height);
     return true;
 }
 
-bool ARWindow::InitializeContext()
-{
-    //TODO: remove hardcoded. get info from init options, json
-    contextHandle = IGraphicsContext::CreateContext(windowHandle, RendererBackend::Vulkan);
+//bool ARWindow::InitializeContext()
+//{
+    // //TODO: remove hardcoded. get info from init options, json
+    // contextHandle = IGraphicsContext::CreateContext(windowHandle, RendererBackend::Vulkan);
+    //
+    // if (contextHandle == nullptr)
+    // {
+    //     spdlog::error("Context creation failed");
+    //     return false;
+    // }
 
-    if (contextHandle == nullptr)
-    {
-        spdlog::error("Context creation failed");
-        return false;
-    }
-
-    return true;
-}
+//    return true;
+//}
 
 
 void ARWindow::ResizeWindow(int width, int height)
@@ -133,4 +133,23 @@ void ARWindow::OnResizeCallback(GLFWwindow * window, int width, int height)
    // glViewport(0, 0, newWidth, newHeight);
 
     //LOG(CMD, "Window is resizing. Width: %d Height: %d", width, height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    ARWindow * parent = reinterpret_cast<ARWindow*>(glfwGetWindowUserPointer(window));
+    parent->framebufferResized = true;
+
+    spdlog::info("Window is resizing");
+}
+
+bool ARWindow::CreateVulkanSurface(const VkInstance & instance, VkSurfaceKHR * surface)
+{
+    if (glfwCreateWindowSurface(instance, windowHandle, nullptr, surface) != VK_SUCCESS) {
+        spdlog::error("Failed to create surface");
+        return false;
+    }
+    spdlog::info("Surface Created Successfully");
+    return true;
 }

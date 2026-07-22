@@ -1,10 +1,6 @@
 /*Implementations*/
 
 template <typename Type>
-inline TVector2<Type>::TVector2()
-{}
-
-template <typename Type>
 inline TVector2<Type>::TVector2(Type inX, Type inY) :X(inX), Y(inY)
 {}
 
@@ -104,14 +100,14 @@ inline TVector2<Type> TVector2<Type>::operator/(Type Scalar) const
 	return TVector2(X / Scalar, Y / Scalar);
 }
 
-template <typename Type>
-inline TVector2<Type>& TVector2<Type>::operator=(const TVector2& Other)
-{
-	this->X = Other.X;
-	this->Y = Other.Y;
-
-	return *this;
-}
+// template <typename Type>
+// inline TVector2<Type>& TVector2<Type>::operator=(const TVector2& Other)
+// {
+// 	this->X = Other.X;
+// 	this->Y = Other.Y;
+//
+// 	return *this;
+// }
 
 template <typename Type>
 inline bool TVector2<Type>::operator==(const TVector2<Type>& Other) const

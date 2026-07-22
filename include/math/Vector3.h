@@ -17,15 +17,17 @@ public:
 	};
 
 public:
-	TVector3();
+	TVector3() = default;
 
-	~TVector3();
+	~TVector3() = default;
 
-	TVector3(const TVector3 & inVec3);
+	TVector3(const TVector3 & inVec3) = default;
 
 	TVector3(const Type inX, const Type inY, const Type inZ);
 
 	TVector3(const Type Scalar);
+
+	TVector3(const double* Other);
 
 	template <typename U>
 	TVector3(TVector2<U> inVec2);
@@ -75,7 +77,7 @@ public:
 	TVector3& operator+=(const TVector3& Other);
 	TVector3& operator-=(const TVector3& Other);
 
-	TVector3& operator=(const TVector3& Other);
+	TVector3& operator=(const TVector3& Other) = default;
 
 	bool operator==(const TVector3& Other) const;
 	bool operator!=(const TVector3& Other) const;

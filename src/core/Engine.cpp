@@ -7,17 +7,32 @@
 #include <core/ApplicationWindow.h>
 #include <GLFW/glfw3.h>
 
-#include "rendering/Mesh.h"
-#include "rhi/GraphicsPipelineDesc.h"
-#include "spdlog/spdlog.h"
-#include "utilities/GLTFLoader.h"
+#include <rhi/descriptors/GraphicsPipelineDesc.h>
 
-AlkyoneRenderEngine::AlkyoneRenderEngine() : window(nullptr)
+#include "rhi/core/barriers/ImageBarrier.h"
+#include "spdlog/spdlog.h"
+#include "resources/GLTFImporter.h"
+
+#include <utilities/TypeUtilities.h>
+
+#include "resources/ResourceManager.h"
+#include "rhi/descriptors/ShaderCompileDesc.h"
+
+AlkyoneRenderEngine::AlkyoneRenderEngine():
+    window(nullptr),
+    rhi(nullptr),
+    shaderManager(nullptr),
+    resourceManager(nullptr),
+    sceneManager(nullptr)
 {
 }
 
 AlkyoneRenderEngine::~AlkyoneRenderEngine()
 {
+    delete sceneManager;
+    delete resourceManager;
+    delete shaderManager;
+    delete rhi;
     delete window;
 }
 
@@ -25,11 +40,9 @@ bool AlkyoneRenderEngine::Initialize()
 {
     if (glfwInit() == false)
     {
-        //LOG(ERROR, "GLFW cannot be initialized");
-        //LOG(ERROR, "It's fine, really. Nothing is working though. :) ");
-
-        //LOG(FATAL, "WINDOW MANAGER FAILED INITIATON\n");
-        //send terminating signal
+        spdlog::error("GLFW cannot be initialized");
+        spdlog::error( "It's fine, really. Nothing is working though. :) ");
+        spdlog::error( "Fatal Error - Alkyone Render Engine \n");
 
         return false;
     }
@@ -39,67 +52,111 @@ bool AlkyoneRenderEngine::Initialize()
     window = new ARWindow();
     window->Initialize();
 
-    shaderManager = new ShaderManager();
+    //TODO: hardcoded VULKAN for now
+    rhi = DynamicRHI::CreateContext(window, RendererBackend::Vulkan);
 
-    //TODO: a getter would be nice
-    shaderManager->Initialize(window->contextHandle->slangTargetOptions);
+    sceneManager = new SceneManager();
+    sceneManager->Initialize();
+
+    resourceManager = new ResourceManager(*rhi);
+    resourceManager->Initialize();
 
     return true;
 }
 
-void AlkyoneRenderEngine::Terminate()
+void AlkyoneRenderEngine::Terminate() const
 {
+    sceneManager->Terminate();
+
+    resourceManager->Terminate();
+    //shaderManager->Terminate();
+    rhi->Terminate();
     window->Terminate();
     glfwTerminate();
 }
-
-void AlkyoneRenderEngine::Run()
+void AlkyoneRenderEngine::Run() const
 {
-    //test GLFT loader
+    std::string filename = std::string("../assets/chess/chess_set_1k.gltf");
+    ParsedData sceneData = GLTFImporter::ImportSceneFile(filename);
 
-    //RenderObject * object = new RenderObject();
+    resourceManager->LoadSceneGeometry(sceneData);
+    sceneManager->SetupSceneHierarchy(sceneData);
 
-    Slang::ComPtr<slang::IModule> slangModule{ shaderManager->slangSession->loadModuleFromSource("triangle", "../shaders/triangle.slang", nullptr, nullptr) };
-    Slang::ComPtr<ISlangBlob> spirv;
-    slangModule->getTargetCode(0, spirv.writeRef());
+    // load a simple shader for testing
+    ShaderHandle sh = resourceManager->LoadShader("basicShader.slang", "vertexMain", "fragmentMain");
 
-    //create a pipeline
-    // Slang::ComPtr<slang::IBlob> diagnostics;
-    //
-    // Slang::ComPtr<slang::IModule> slangModule{
-    //     shaderManager->slangSession->loadModule("triangle", diagnostics.writeRef())
-    // };
-    //
-    // if (!slangModule)
-    // {
-    //     if (diagnostics)
-    //         std::cerr << (const char*)diagnostics->getBufferPointer() << std::endl;
-    // }
-    GraphicsPipelineDesc desc;
-    desc.vertexShaderModule = slangModule;
-    desc.fragmentShaderModule = slangModule;
+    GraphicsPipelineDesc desc {};
+    desc.shader = sh,
     desc.viewportCount = 1;
     desc.scissorCount = 1;
     desc.depthTestEnable = false;
     desc.depthWriteEnable = false;
-    desc.depthCompareOp = CompareOp::OP_LESS_EQUAL;
+    desc.depthCompareOp = OP_LESS_EQUAL;
     desc.imageFormats.push_back(FORMAT_B8G8R8A8_SRGB);
     desc.depthImageFormat = FORMAT_D32_SFLOAT_S8_UINT;
     desc.polygonMode = POLYGON_MODE_FILL;
     desc.cullMode = CULL_MODE_NONE;
     desc.frontFace = FRONT_FACE_CLOCKWISE;
 
-    window->contextHandle->CreateGraphicsPipeline(desc);
+    rhi->CreatePipeline(desc);
 
-
-    MeshGroup* meshgroup = new MeshGroup();
-
-    auto loader = GLTFLoader();
-
-    loader.Load();
-    loader.PopulateMeshGroup(*meshgroup);
 
     while (!glfwWindowShouldClose(window->windowHandle)) {
         glfwPollEvents();
+
+        if (rhi->BeginFrame() == false)
+        {
+            spdlog::error("Skipping Frame");
+            continue;
+        }
+
+        rhi->TransitionBarrier(ImageBarrier{
+            .sourceStageMask = StageFlagBits::STAGE_COLOUR_ATTACHMENT_OUTPUT,
+            .sourceAccessMask = AccessMaskFlagBits::ACCESS_NONE,
+            .destStageMask = StageFlagBits::STAGE_COLOUR_ATTACHMENT_OUTPUT,
+            .destAccessMask = AccessMaskFlagBits::ACCESS_COLOUR_ATTACHMENT_WRITE,
+            .sourceState = STATE_UNDEFINED,
+            .destState = STATE_COLOUR_ATTACHMENT,
+            .aspectMask = ImageAspectFlagBits::ASPECT_COLOUR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        });
+        //rhi->ClearColour(Vector3f(0.5f,0.5f,0.1f));
+
+        //setup the rendering info
+
+        rhi->BeginRendering();
+        //rendering commands here
+
+        rhi->BindPipeline(0);
+
+        //rhi->PrepareVertexBuffer(*meshgroup);
+
+
+        //rhi->SetViewport(0, 0, window->GetWidth(), window->GetHeight());
+        //rhi->SetScissor(0, 0, window->GetWidth(), window->GetHeight());
+
+        rhi->Draw();
+
+        rhi->EndRendering();
+
+
+        rhi->TransitionBarrier(ImageBarrier{
+            .sourceStageMask = StageFlagBits::STAGE_ALL_COMMANDS,
+            .sourceAccessMask = AccessMaskFlagBits::ACCESS_MEMORY_WRITE,
+            .destStageMask = StageFlagBits::STAGE_ALL_COMMANDS,
+            .destAccessMask = AccessMaskFlagBits::ACCESS_MEMORY_WRITE | AccessMaskFlagBits::ACCESS_MEMORY_READ,
+            .sourceState = STATE_COLOUR_ATTACHMENT,
+            .destState = STATE_PRESENT_SRC,
+            .aspectMask = ImageAspectFlagBits::ASPECT_COLOUR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        });
+        rhi->EndFrame();
     }
+    rhi->WaitIdle();
 }

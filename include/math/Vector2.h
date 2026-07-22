@@ -19,7 +19,9 @@ public:
 
 
 public:
-	TVector2();
+	TVector2() = default;
+	~TVector2() = default;
+	TVector2(const TVector2 & inVec2) = default;
 	
 	TVector2(Type inX, Type inY);
 
@@ -60,7 +62,7 @@ public:
 	Type Dot(const TVector2 & Other) const;
 	Type Dot(const TVector2 & A, const TVector2 & B);
 
-	TVector2 & operator=(const TVector2& Other);
+	TVector2 & operator=(const TVector2& Other) = default;
 
 	bool operator==(const TVector2& Other) const;
 	bool operator!=(const TVector2& Other) const;
