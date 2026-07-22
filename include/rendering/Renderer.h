@@ -8,7 +8,7 @@
 
 
 class ResourceManager;
-class Mesh;
+struct Mesh;
 
 class Renderer
 {

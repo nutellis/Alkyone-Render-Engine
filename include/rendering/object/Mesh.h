@@ -10,13 +10,11 @@
 struct Mesh
 {
 public:
-    uint32 firstIndex;
-    uint32 indexCount;
-    uint32 vertexOffset;
-    uint32 indexBufferOffset;
-    uint32 materialIndex;
-
-    Handle meshIndexHandle;
+    uint32 firstIndex{};
+    uint32 indexCount{};
+    uint32 vertexOffset{};
+    uint32 indexBufferOffset{};
+    uint32 materialIndex{};
 
     //bool isRenderable; // make it a bitfield
 

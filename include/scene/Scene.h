@@ -24,7 +24,8 @@ private:
 
 public: //TODO: make them private later please
     std::vector<SceneObject> objects; // a list of all the objects
-    std::vector<Matrix4f> transforms;
+    std::vector<Matrix4f> localTransforms;
+    std::vector<Matrix4f> globalTransforms;
     std::vector<std::string> names;
     std::vector<bool> dirty;
     std::vector<ObjectType> types;

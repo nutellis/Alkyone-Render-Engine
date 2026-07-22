@@ -62,11 +62,14 @@ ParsedData GLTFImporter::ProcessScenes(const tinygltf::Model& gltf)
         return result;
     }
 
+    ProcessMeshData(gltf, result);
+
     const std::vector<tinygltf::Node>& nodes = gltf.nodes;
 
     // do work on all scenes
-     for (const auto& scene : gltf.scenes)
-     {
+     //for (const auto& scene : gltf.scenes)
+     //{
+    auto scene = gltf.scenes[0];
         std::vector<size_t> stackIndices;
 
         std::vector<uint32> indexToHandleMap = std::vector<uint32>(
@@ -114,8 +117,6 @@ ParsedData GLTFImporter::ProcessScenes(const tinygltf::Model& gltf)
             if (currentNode.mesh > -1)
             {
                 parsedNode.type = 6;
-                //found a mesh, we should fetch the info
-                result.sceneMeshes.push_back(ProcessMeshData(gltf, currentNode.mesh));
             }
             else if (currentNode.camera > -1)
             {
@@ -141,7 +142,7 @@ ParsedData GLTFImporter::ProcessScenes(const tinygltf::Model& gltf)
 
         Handle currentHandle = Handle(1,  0);
         Handle previousSiblingHandle = Handle(1, 0xFFFFFFFF);
-        for (int32 i =  static_cast<int32>(scene.nodes.size()) - 1; i >= 0; i--)
+        for (int32 i = static_cast<int32>(scene.nodes.size()) - 1; i >= 0; i--)
         {
             size_t childGltfIndex = scene.nodes[i];
             Handle childHandle = Handle(1,  indexToHandleMap[childGltfIndex]);
@@ -159,11 +160,11 @@ ParsedData GLTFImporter::ProcessScenes(const tinygltf::Model& gltf)
             previousSiblingHandle = childHandle;
         }
 
-        for (size_t i = 1; i < result.flatHierarchy.size() - 1; i++)
+        for (size_t i = 1; i < result.flatHierarchy.size(); i++)
         {
             const tinygltf::Node& node = nodes[gltfSourceIndices[i - 1]];
 
-            currentHandle = Handle(1,  indexToHandleMap[i]);
+            currentHandle = Handle(1,  static_cast<uint32>(i));
             previousSiblingHandle = Handle(1, 0xFFFFFFFF);
 
 
@@ -185,41 +186,45 @@ ParsedData GLTFImporter::ProcessScenes(const tinygltf::Model& gltf)
                 previousSiblingHandle = childHandle;
             }
         }
-         spdlog::info("Finished processing scene");
-     }
+         spdlog::info("GLTFImporter: Finished processing scene");
+     //}
     return result;
 }
 
-MeshGroup GLTFImporter::ProcessMeshData(const tinygltf::Model& gltf, size_t meshIndex)
+void GLTFImporter::ProcessMeshData(const tinygltf::Model& gltf, ParsedData& result)
 {
     const std::vector<tinygltf::Mesh> meshes = gltf.meshes;
-    //MESH
-    const tinygltf::Mesh mesh = meshes[meshIndex];
 
-    //create a new MeshGroup
-    MeshGroup meshGroup = {};
-    meshGroup.subMeshes.reserve(mesh.primitives.size());
-    for (const tinygltf::Primitive& primitive : mesh.primitives)
-    {
-        Mesh meshPrimitive = {};
+    for (const tinygltf::Mesh& mesh : meshes) {
+        //create a new MeshGroup
+        MeshGroup meshGroup = {};
+        meshGroup.subMeshes.reserve(mesh.primitives.size());
 
-        GetVertices(gltf, primitive, meshGroup.vertices);
+        std::vector<Vertex> vertices;
+        std::vector<uint32> indices;
+        for (const tinygltf::Primitive& primitive : mesh.primitives)
+        {
+            Mesh meshPrimitive = {};
 
-        GetIndices(gltf, primitive,meshGroup.indices);
+            meshPrimitive.vertexOffset = result.globalVertices.size() + vertices.size();
+            meshPrimitive.firstIndex = result.globalIndices.size() + indices.size();
 
-        meshPrimitive.firstIndex = meshGroup.indices.size();
-        meshPrimitive.indexCount = gltf.accessors[primitive.indices].count;
-        meshPrimitive.vertexOffset = meshGroup.vertices.size();
-        meshPrimitive.indexBufferOffset = static_cast<uint32>(meshGroup.vertices.size() * sizeof(Vertex));
-        meshPrimitive.materialIndex = primitive.material;
+            GetVertices(gltf, primitive, vertices);
+            GetIndices(gltf, primitive,indices);
 
-        meshGroup.subMeshes.push_back(meshPrimitive);
+            meshPrimitive.indexCount = gltf.accessors[primitive.indices].count;
+            meshPrimitive.materialIndex = primitive.material;
 
-        spdlog::info("Finished processing primitive. firstIndex: {}, vertexOffset: {}",
-                 meshPrimitive.firstIndex, meshPrimitive.vertexOffset);
+            meshGroup.subMeshes.push_back(meshPrimitive);
+
+            spdlog::info("Finished processing primitive. firstIndex: {}, vertexOffset: {}",
+                     meshPrimitive.firstIndex, meshPrimitive.vertexOffset);
+        }
+        result.sceneMeshes.push_back(meshGroup);
+
+        result.globalVertices.insert(result.globalVertices.end(), vertices.begin(), vertices.end());
+        result.globalIndices.insert(result.globalIndices.end(), indices.begin(), indices.end());
     }
-
-    return meshGroup;
 }
 
 

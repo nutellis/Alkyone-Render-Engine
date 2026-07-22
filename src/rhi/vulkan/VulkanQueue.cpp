@@ -57,7 +57,7 @@ bool VulkanQueue::Initialize(size_t poolSize = FRAMES_IN_FLIGHT)
 
 void VulkanQueue::Terminate()
 {
-    for (int i=0; i<FRAMES_IN_FLIGHT; ++i)
+    for (int i=0; i< pools.size(); ++i)
     {
         pools[i]->Terminate();
         delete pools[i];

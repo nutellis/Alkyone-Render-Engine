@@ -5,6 +5,7 @@
 #ifndef ALKYONERENDERENGINE_RESOURCE_H
 #define ALKYONERENDERENGINE_RESOURCE_H
 
+#include "ResourceHandle.h"
 #include "core/PODTypes.h"
 
 enum struct ResourceType : uint32
@@ -17,16 +18,7 @@ enum struct ResourceType : uint32
     Unknown
 };
 
-template<typename T>
-struct ResourceHandle
-{
-    Handle resourceId;
 
-    operator bool() const
-    {
-        return resourceId.ID() != 0;
-    }
-};
 
 template<typename T>
 class Resource

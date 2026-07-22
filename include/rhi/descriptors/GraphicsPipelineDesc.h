@@ -5,9 +5,9 @@
 #ifndef ALKYONERENDERENGINE_PIPELINEDESCR_H
 #define ALKYONERENDERENGINE_PIPELINEDESCR_H
 
-#include <slang-com-ptr.h>
 #include <vector>
 #include <core/PODTypes.h>
+#include <resources/ResourceHandle.h>
 
 enum LogicOp {
     OP_CLEAR = 0, // VK_LOGIC_OP_CLEAR | D3D12_LOGIC_OP_CLEAR
@@ -81,13 +81,13 @@ enum FrontFace
     FRONT_FACE_COUNTER_CLOCKWISE = 0, // VK_FRONT_FACE_COUNTER_CLOCKWISE | D3D12 = TRUE
     FRONT_FACE_CLOCKWISE // VK_FRONT_FACE_CLOCKWISE | D3D12 = FALSE
 };
+
+
 struct GraphicsPipelineDesc
 {
     //shaders of type Slang::ComPtr<slang::IModule>. For starters, we support separate files for each shader to avoid complexity
     // vertex
-    Slang::ComPtr<slang::IModule> shaderModule;
-    // fragment/pixel
-    //Slang::ComPtr<slang::IModule> fragmentShaderModule;
+    ShaderHandle shader;
     //tessellation related (hull domain)
     //geometry
 

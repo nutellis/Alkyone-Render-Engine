@@ -7,6 +7,7 @@
 #include <string>
 
 #include "containers/SlotMap.h"
+#include "math/Matrix4.h"
 
 
 enum struct ObjectType : uint32
@@ -30,6 +31,11 @@ struct SceneObject
 {
 
 public:
+    Matrix4f transform;
+    std::string name;
+    ObjectType type;
+    bool dirty;
+    int32 meshIndex;
 
     SceneObjectHandle firstChild = {
         Handle(1, 0xFFFFFFFF)

@@ -6,6 +6,7 @@
 #define ALKYONERENDERENGINE_BUFFERDESC_H
 #include "core/PODTypes.h"
 
+
 enum class BufferTypeBits : uint32
 {
     NONE = 0,

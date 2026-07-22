@@ -7,7 +7,7 @@
 #include "containers/DArray.h"
 
 
-class Mesh;
+struct Mesh;
 
 class MeshLodGroup
 {

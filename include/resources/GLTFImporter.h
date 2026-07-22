@@ -10,10 +10,11 @@
 
 #include "math/GenericMath.h"
 #include "math/Matrix4.h"
-#include "../rendering/object/MeshGroup.h"
+#include "rendering/object/MeshGroup.h"
 #include "rendering/types/Vertex.h"
+#include "rhi/core/DynamicRHI.h"
 
-class Mesh;
+struct Mesh;
 class Material;
 
 
@@ -35,6 +36,11 @@ struct ParsedData
 {
     std::vector<SceneNode> flatHierarchy;
     std::vector<MeshGroup> sceneMeshes;
+
+    std::vector<Vertex> globalVertices;
+    std::vector<uint32> globalIndices;
+
+    std::vector<Handle> engineMeshHandles;
 };
 
 class GLTFImporter
@@ -51,11 +57,12 @@ public:
 private:
     static ParsedData ProcessScenes(const tinygltf::Model& gltf);
     bool ProcessMesh(tinygltf::Mesh mesh);
-    static MeshGroup ProcessMeshData(const tinygltf::Model& gltf, size_t meshIndex);
+    static void ProcessMeshData(const tinygltf::Model &gltf, ParsedData &result);
     static Matrix4f ProcessTransform(tinygltf::Node node);
     static bool PopulateMeshGroup(tinygltf::Model gltfModel, MeshGroup& meshgroup);
     static void GetVertices(tinygltf::Model model, const tinygltf::Primitive& primitive, std::vector<Vertex>& vertices);
     static void GetIndices(tinygltf::Model model, const tinygltf::Primitive& primitive, std::vector<uint32>& indices);
+
     //static void dbgModel();
 
 

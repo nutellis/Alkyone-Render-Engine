@@ -82,6 +82,12 @@ public:
         return nullptr;
     }
 
+    void Clear() {
+        data.clear();
+        indices.clear();
+        freeSlotsTracker.clear();
+    }
+
 private:
     std::vector<Handle> indices;
     std::vector<std::optional<T>> data;

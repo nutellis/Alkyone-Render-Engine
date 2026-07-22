@@ -16,6 +16,7 @@
 #include <utilities/TypeUtilities.h>
 
 #include "resources/ResourceManager.h"
+#include "rhi/descriptors/ShaderCompileDesc.h"
 
 AlkyoneRenderEngine::AlkyoneRenderEngine():
     window(nullptr),
@@ -54,9 +55,6 @@ bool AlkyoneRenderEngine::Initialize()
     //TODO: hardcoded VULKAN for now
     rhi = DynamicRHI::CreateContext(window, RendererBackend::Vulkan);
 
-    shaderManager = new ShaderManager();
-    shaderManager->Initialize(rhi->GetSlangTargetOptions());
-
     sceneManager = new SceneManager();
     sceneManager->Initialize();
 
@@ -81,19 +79,19 @@ void AlkyoneRenderEngine::Run() const
     std::string filename = std::string("../assets/chess/chess_set_1k.gltf");
     ParsedData sceneData = GLTFImporter::ImportSceneFile(filename);
 
-    resourceManager->UploadMeshes(sceneData.sceneMeshes);
+    resourceManager->LoadSceneGeometry(sceneData);
     sceneManager->SetupSceneHierarchy(sceneData);
 
-
-    Slang::ComPtr<slang::IModule> slangModule{ shaderManager->slangSession->loadModuleFromSource("triangle", "../shaders/triangle.slang", nullptr, nullptr) };
+    // load a simple shader for testing
+    ShaderHandle sh = resourceManager->LoadShader("basicShader.slang", "vertexMain", "fragmentMain");
 
     GraphicsPipelineDesc desc {};
-    desc.shaderModule = slangModule;
+    desc.shader = sh,
     desc.viewportCount = 1;
     desc.scissorCount = 1;
     desc.depthTestEnable = false;
     desc.depthWriteEnable = false;
-    desc.depthCompareOp = CompareOp::OP_LESS_EQUAL;
+    desc.depthCompareOp = OP_LESS_EQUAL;
     desc.imageFormats.push_back(FORMAT_B8G8R8A8_SRGB);
     desc.depthImageFormat = FORMAT_D32_SFLOAT_S8_UINT;
     desc.polygonMode = POLYGON_MODE_FILL;
@@ -131,9 +129,6 @@ void AlkyoneRenderEngine::Run() const
 
         rhi->BeginRendering();
         //rendering commands here
-
-        //for each mesh in the scene (we only have 1 for now)
-
 
         rhi->BindPipeline(0);
 

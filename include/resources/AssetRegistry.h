@@ -8,7 +8,7 @@
 
 
 class GLTFImporter;
-class Mesh;
+struct Mesh;
 
 class AssetRegistry
 {

@@ -12,17 +12,31 @@
 
 #include <vector>
 
+#include "vk_mem_alloc.h"
 #include "containers/SlotMap.h"
 #include "math/Vector3.h"
+#include "resources/ResourceHandle.h"
 
-class VulkanBuffer;
+struct VulkanShader;
+struct VulkanBuffer;
+struct VulkanGraphicsPipeline;
 class VulkanFrameSync;
 class VulkanCommandBuffer;
 class VulkanDevice;
 class VulkanSwapchain;
 class ARWindow;
-class VulkanGraphicsPipeline;
 
+
+enum class InitResult
+{
+    Success,
+    VolkInitializationFailed,
+    InstanceCreationFailed,
+    DeviceInitializationFailed,
+    SwapchainInitializationFailed,
+    FrameSyncInitializationFailed,
+    SlangInitializationFailed
+};
 
 class VulkanRHI: public DynamicRHI
 {
@@ -35,7 +49,6 @@ public:
     void SwapBuffers() override;
 
     std::string GetBackendString() override;
-    uint32_t CreatePipeline(const GraphicsPipelineDesc& desc) override;
     ContextSlangTargetOptions GetSlangTargetOptions() override;
 
     bool CreateInstance();
@@ -44,12 +57,32 @@ public:
 
     void Validate() override;
 
+
+    //shaders
+    bool InitializeSlang(const ContextSlangTargetOptions &slangInitOptions) override;
+    ShaderHandle CreateShader(const ShaderCompileDesc &desc) override;
+
+    void DestroyShader(ShaderHandle handle) override;
+    void DestroyShader(VulkanShader &shader, VkDevice logicalDevice);
+
+    RHIShader * GetShader(ShaderHandle ShaderHandle) override;
+
+
     //Buffers
-    Handle CreateBuffer(BufferDesc desc) override;
-    IBuffer* GetBuffer(Handle handle) override;
-    CopyRequest RecordCopyBuffer(Handle src, Handle dst, uint64 size) override;
+    BufferHandle CreateBuffer(const BufferDesc & desc) override;
+
+    RHIBuffer &GetBuffer(BufferHandle bufferHandle) override;
+    void HostCopyBuffer(BufferHandle bufferHandle, const void * src, size_t size, size_t offset) override;
+    CopyRequest RecordCopyBuffer(BufferHandle src, BufferHandle dst, uint64 size, size_t srcOffset, size_t dstOffset) override;
     void SubmitCopyBuffer(std::vector<CopyRequest> copyRequests) override;
-    void DestroyBuffer(Handle handle) override;
+
+    void DestroyBuffer(BufferHandle bufferHandle) override;
+    void DestroyBuffer(VulkanBuffer &vulkanBuffer, VmaAllocator allocator);
+
+    //Pipelines
+    PipelineHandle CreatePipeline(const GraphicsPipelineDesc & desc) override;
+    void DestroyPipeline(PipelineHandle pipelineHandle) override;
+    void DestroyPipeline(VulkanGraphicsPipeline& vulkanPipeline, VkDevice logicalDevice);
 
     //Drawing
     bool BeginFrame() override;
@@ -83,13 +116,14 @@ private:
     VulkanFrameSync* frameSync = nullptr;
 
     //pipelines
-    std::vector<VulkanGraphicsPipeline> pipelineStorage;
     std::unordered_map<size_t, uint32> pipelineCache;
 
     //command buffer used at the moment
     VulkanCommandBuffer * cmd = nullptr;
 
-    SlotMap<VulkanBuffer> buffers;
+    std::vector<VulkanBuffer> buffers;
+    std::vector<VulkanShader> shaders;
+    std::vector<VulkanGraphicsPipeline> pipelines;
 };
 
 

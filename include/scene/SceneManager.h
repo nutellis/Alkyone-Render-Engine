@@ -23,6 +23,9 @@ public:
     bool Initialize();
     void Terminate();
     void SetupSceneHierarchy(const ParsedData& parsed_data);
+
+    void UpdateGlobalTransforms(Handle sceneId);
+
     Handle CreateScene();
 
     void SetActiveScene(Handle sceneIndex);

@@ -5,6 +5,7 @@
 #ifndef ALKYONERENDERENGINE_PODTYPES_H
 #define ALKYONERENDERENGINE_PODTYPES_H
 
+#include <compare>
 
 namespace pod
 {
@@ -44,6 +45,17 @@ struct Handle
     {
         return ((generation << 16) | index );
     }
+
+    static Handle Invalid() {
+        return {0, 0xFFFFFFFF};
+    }
+    static Handle Create(unsigned int index) {
+        return {0, index};
+    }
+
+    auto operator<=>(const Handle&) const = default;
+
+
 };
 
 using namespace pod;

@@ -8,7 +8,7 @@
 
 #include <core/ApplicationWindow.h>
 
-#include <rhi/core/IGraphicsPipeline.h>
+#include <rhi/core/RHIGraphicsPipeline.h>
 #include "rhi/vulkan/VulkanCommandPool.h"
 #include "rhi/vulkan/VulkanFrameSync.h"
 
@@ -24,6 +24,10 @@
 
 #include <utilities/TypeUtilities.h>
 
+#include "rhi/descriptors/GraphicsPipelineDesc.h"
+#include "rhi/descriptors/ShaderCompileDesc.h"
+#include "rhi/vulkan/VulkanBufferTransforms.h"
+#include "rhi/vulkan/VulkanShader.h"
 #include "rhi/vulkan/VulkanSwapchain.h"
 
 namespace
@@ -52,10 +56,12 @@ VulkanRHI::VulkanRHI(ARWindow * windowHandle) : window(windowHandle)
 bool VulkanRHI::Initialize()
 {
     spdlog::info("Alkyone RHI: Initializing Vulkan Context");
+
     if (volkInitialize() != VK_SUCCESS)
     {
         spdlog::error("Alkyone RHI: Critical failure, Volk Failed to Initialize");
         return false;
+        //return InitResult::VolkInitializationFailed;
     }
 
     if (CreateInstance() == false)
@@ -68,9 +74,9 @@ bool VulkanRHI::Initialize()
     swapchain = new VulkanSwapchain(*device, *window);
     frameSync = new VulkanFrameSync(*device, *swapchain);
 
-    if (device->Initialize()
+    if ((device->Initialize()
         && swapchain->Initialize()
-        && frameSync->Initialize()
+        && frameSync->Initialize())
         == false)
     {
         spdlog::error("Alkyone RHI: Critical failure during Vulkan initialization");
@@ -87,6 +93,8 @@ bool VulkanRHI::Initialize()
         slang::CompilerOptionName::EmitSpirvDirectly,
         {slang::CompilerOptionValueKind::Int, 1}
     );
+    // TODO: add a check block for slang
+    InitializeSlang(slangTargetOptions);
 
     spdlog::info("Alkyone RHI: Context Initialized Successfully");
     return true;
@@ -94,12 +102,29 @@ bool VulkanRHI::Initialize()
 
 void VulkanRHI::Terminate()
 {
-    for (auto pipeline : pipelineStorage)
-    {
-        pipeline.DestroyPipeline();
+    VkDevice logicalDevice = device->GetLogicalDevice();
+    VmaAllocator allocator = device->GetAllocator();
+
+    vkDeviceWaitIdle(logicalDevice);
+
+    for (auto& buffer : buffers) {
+        DestroyBuffer(buffer,allocator);
     }
-    pipelineStorage.clear();
-    pipelineStorage.shrink_to_fit();
+    buffers.clear();
+    buffers.shrink_to_fit();
+
+    for (auto& shader : shaders) {
+       DestroyShader(shader, logicalDevice);
+    }
+    shaders.clear();
+    shaders.shrink_to_fit();
+
+    for (auto pipeline : pipelines)
+    {
+        DestroyPipeline(pipeline, logicalDevice);
+    }
+    pipelines.clear();
+    pipelines.shrink_to_fit();
 
     frameSync->Terminate();
     swapchain->Terminate();
@@ -217,24 +242,7 @@ std::string VulkanRHI::GetBackendString()
     return "Backend Error";
 }
 
-uint32 VulkanRHI::CreatePipeline(const GraphicsPipelineDesc& desc)
-{
-    size_t hash = hashPipeline(desc);
-    //check if pipeline exists
-     if (pipelineCache.contains(hash))
-     {
-         return pipelineCache[hash];
-     }
-    VulkanGraphicsPipeline pipeline = VulkanGraphicsPipeline(*device);
-    pipeline.CreatePipeline(desc);
 
-    pipelineStorage.push_back(pipeline);
-    size_t index = pipelineStorage.size();
-
-    pipelineCache[hash] = static_cast<uint32>(index);
-
-    return false;
-}
 
 // uint32 VulkanRHI::CreatePipeline(const GraphicsPipelineDesc& desc)
 // {
@@ -342,40 +350,238 @@ void VulkanRHI::Validate()
     }
 }
 
-Handle VulkanRHI::CreateBuffer(BufferDesc desc)
-{
-    VulkanBuffer buffer = VulkanBuffer(device);
-    if (buffer.Initialize(desc))
-    {
-        return buffers.createSlot(std::move(buffer));
-    }
-    return Handle{
-        0,0xFFFFFF
+//-----------------------------------------------------------------------
+// SHADERS
+//-----------------------------------------------------------------------
+bool VulkanRHI::InitializeSlang(const ContextSlangTargetOptions &slangInitOptions) {
+    /*
+    If you want to enable GLSL compatibility mode, you need to set SlangGlobalSessionDesc::enableGLSL to true when calling createGlobalSession().
+    This will load the necessary GLSL intrinsic module for compiling GLSL code.
+    Without this setting, compiling GLSL code will result in an error.
+    */
+    createGlobalSession(&desc, globalSession.writeRef());
+
+    // create session
+    auto slangTargets{
+        std::to_array<slang::TargetDesc>({ {
+            .format = slangInitOptions.format,
+            .profile = globalSession->findProfile(slangInitOptions.profile.c_str()),
+            }
+        })
     };
+
+    auto slangOptions{ std::to_array<slang::CompilerOptionEntry>({ {
+        slangInitOptions.name,
+        slangInitOptions.value
+    } }) };
+
+    const char * searchPaths[] = { "../shaders/" };
+
+    slang::SessionDesc slangSessionDesc{
+        .targets = slangTargets.data(),
+        .targetCount = static_cast<SlangInt>(slangTargets.size()),
+        .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
+        .searchPaths = searchPaths,
+        .searchPathCount = 1,
+        .compilerOptionEntries = slangOptions.data(),
+        .compilerOptionEntryCount = static_cast<uint32>(slangOptions.size())
+
+    };
+
+    if (globalSession->createSession(slangSessionDesc, slangSession.writeRef()) != SLANG_OK)
+    {
+        spdlog::error("Slang failed to Create Session");
+        return false;
+    }
+
+    spdlog::info("Slang Session Created");
+    return true;
 }
 
-void VulkanRHI::AllocateBuffer(Handle bufferHandle, void * src, size_t size)
+ShaderHandle VulkanRHI::CreateShader(const ShaderCompileDesc &desc) {
+
+    Slang::ComPtr<slang::IBlob> diagnostics;
+
+    //TODO: move this to its own class or at least function
+    Slang::ComPtr<slang::IModule> slangModule {
+        slangSession->loadModule(desc.filename.c_str(),diagnostics.writeRef())
+    };
+    if (slangModule == nullptr) {
+        spdlog::error("Failed to load module {}: {}", desc.filename,
+            diagnostics ? static_cast<const char *>(diagnostics->getBufferPointer()) : "Unknown error");
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    slang::IEntryPoint * vertexEntryPoint = nullptr;
+    slangModule->findEntryPointByName(desc.vertexEntryPoint.c_str(), &vertexEntryPoint);
+
+    slang::IEntryPoint* fragmentEntryPoint = nullptr;
+    slangModule->findEntryPointByName(desc.fragmentEntryPoint.c_str(), &fragmentEntryPoint);
+
+    if (!vertexEntryPoint || !fragmentEntryPoint)
+    {
+        spdlog::error("Failed to find entry points in {}", desc.filename);
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    slang::IComponentType * componentTypes[] = {slangModule, vertexEntryPoint, fragmentEntryPoint};
+    Slang::ComPtr<slang::IComponentType> slangProgram;
+
+    SlangResult result = slangSession->createCompositeComponentType(
+        componentTypes,
+        3,
+        slangProgram.writeRef(),
+        diagnostics.writeRef()
+    );
+
+    if (SLANG_FAILED(result)) {
+        spdlog::error("Failed to link shader program: {}",
+            diagnostics ? static_cast<const char *>(diagnostics->getBufferPointer()) : "Unknown error");
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    Slang::ComPtr<slang::IBlob> spirvVertex;
+    result = slangProgram->getEntryPointCode(
+        0,
+        0,
+        spirvVertex.writeRef(),
+        diagnostics.writeRef()
+    );
+    if (SLANG_FAILED(result))
+    {
+        spdlog::error("Failed to extract Vertex SPIR-V: {}",
+            diagnostics ? static_cast<const char *>(diagnostics->getBufferPointer()) : "Unknown error");
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    Slang::ComPtr<slang::IBlob> spirvFrag;
+    result = slangProgram->getEntryPointCode(1, 0, spirvFrag.writeRef(), diagnostics.writeRef());
+    if (SLANG_FAILED(result))
+    {
+        spdlog::error("Failed to extract Fragment SPIR-V: {}",
+            diagnostics ? static_cast<const char *>(diagnostics->getBufferPointer()) : "Unknown error");
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    VkShaderModuleCreateInfo vertInfo {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = spirvVertex->getBufferSize(),
+        .pCode = static_cast<const uint32*>(spirvVertex->getBufferPointer())
+    };
+
+    VkDevice logicalDevice = device->GetLogicalDevice();
+
+    VkShaderModule vertexModule {};
+    if (vkCreateShaderModule(logicalDevice, &vertInfo, nullptr, &vertexModule) != VK_SUCCESS) {
+        spdlog::error("Failed to create shader module");
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    VkShaderModuleCreateInfo fragInfo{
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = spirvFrag->getBufferSize(),
+        .pCode = static_cast<const uint32_t*>(spirvFrag->getBufferPointer())
+    };
+
+    VkShaderModule fragmentModule{};
+    if (vkCreateShaderModule(logicalDevice, &fragInfo, nullptr, &fragmentModule) != VK_SUCCESS)
+    {
+        spdlog::error("Vulkan failed to create Fragment Shader Module");
+        vkDestroyShaderModule(logicalDevice, vertexModule, nullptr);
+        return ShaderHandle{Handle::Invalid()};
+    }
+
+    VulkanShader shader = {
+        std::move(slangProgram),
+        vertexModule,
+        fragmentModule
+    };
+    const uint32 nextIndex = static_cast<uint32>(shaders.size());
+    shaders.push_back(shader);
+    return ShaderHandle{Handle::Create(nextIndex)};
+}
+
+void VulkanRHI::DestroyShader(ShaderHandle handle) {
+    VulkanShader& shader = shaders[handle.resourceId.index];
+    VkDevice logicalDevice = device->GetLogicalDevice();
+
+    vkDestroyShaderModule(logicalDevice, shader.vertexModule, nullptr);
+    vkDestroyShaderModule(logicalDevice, shader.fragmentModule, nullptr);
+}
+
+void VulkanRHI::DestroyShader(VulkanShader& shader, VkDevice logicalDevice)
 {
-    VulkanBuffer * buffer = buffers.GetSlot(bufferHandle);
-    buffer->Map();
-
-    memcpy(, meshGroup.vertices.data(), verticesByteSize);
+    vkDestroyShaderModule(logicalDevice, shader.vertexModule, nullptr);
+    vkDestroyShaderModule(logicalDevice, shader.fragmentModule, nullptr);
 }
 
-IBuffer* VulkanRHI::GetBuffer(Handle handle)
+RHIShader * VulkanRHI::GetShader(ShaderHandle ShaderHandle) {
+    return &shaders[ShaderHandle.resourceId.index];
+}
+
+
+//-----------------------------------------------------------------------
+// BUFFERS
+//-----------------------------------------------------------------------
+BufferHandle VulkanRHI::CreateBuffer(const BufferDesc & desc) {
+
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VmaAllocation allocation = VK_NULL_HANDLE;
+
+    VkBufferCreateInfo bufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = desc.size,
+        .usage = Transformations::VulkanBufferUsageFlags(desc.usageFlags),
+        .sharingMode = desc.sharingMode == SharingMode::EXCLUSIVE ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT
+    };
+
+    VmaAllocationCreateInfo vmaAllocationCreateInfo = {
+        .flags = Transformations::VulkanMemoryUsageFlags(desc.memoryUsageStrategy),
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+    VmaAllocationInfo allocInfo;
+    VkResult result = vmaCreateBuffer(device->GetAllocator(), &bufferCreateInfo, &vmaAllocationCreateInfo, &buffer, &allocation, &allocInfo);
+    if (result != VK_SUCCESS)
+    {
+        // buffer failed to init
+        spdlog::error("Failed to create Vulkan buffer {}", (int)result);
+        return BufferHandle { Handle::Invalid() };
+    }
+
+    VulkanBuffer vulkanBuffer {
+        allocInfo.pMappedData,
+        buffer,
+        allocation
+    };
+
+    const uint32 nextIndex = static_cast<uint32>(buffers.size());
+    buffers.push_back(std::move(vulkanBuffer));
+
+    return BufferHandle { Handle::Create(nextIndex )};
+}
+
+void VulkanRHI::HostCopyBuffer(BufferHandle bufferHandle, const void * src, size_t size, size_t offset)
 {
-    return buffers.GetSlot(handle);
+    VulkanBuffer & buffer = buffers[bufferHandle.handle.index];
+    assert(buffer.mappedData != nullptr && "Fatal: Attempted to MemCopy into an unmapped or GPU_ONLY buffer.");
+    memcpy(static_cast<char*>(buffer.mappedData) + offset, src, size);
+
+}
+
+RHIBuffer &VulkanRHI::GetBuffer(BufferHandle bufferHandle)
+{
+    return buffers[bufferHandle.handle.index];
 }
 
 
-CopyRequest VulkanRHI::RecordCopyBuffer(Handle src, Handle dst, uint64 size)
+CopyRequest VulkanRHI::RecordCopyBuffer(BufferHandle src, BufferHandle dst, uint64 size, size_t srcOffset, size_t dstOffset)
 {
     return {
-        .src = src,
-        .dst = dst,
+        .src = src.handle,
+        .dst = dst.handle,
         .region = {
-            .srcOffset = 0,
-            .dstOffset = 0,
+            .srcOffset = srcOffset,
+            .dstOffset = dstOffset,
             .size = size
         }
     };
@@ -383,7 +589,6 @@ CopyRequest VulkanRHI::RecordCopyBuffer(Handle src, Handle dst, uint64 size)
 
 void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
 {
-
     //get the queue for tranfer
     VulkanQueue* transferQueue = device->GetTransferQueue();
 
@@ -398,8 +603,8 @@ void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
 
     for (const CopyRequest& request : copyRequests)
     {
-        VulkanBuffer* srcBuffer = buffers.GetSlot(request.src);
-        VulkanBuffer* dstBuffer = buffers.GetSlot(request.dst);
+        VulkanBuffer& srcBuffer = buffers[request.src.index];
+        VulkanBuffer& dstBuffer = buffers[request.dst.index];
 
         VkBufferCopy copyRegion = {
             .srcOffset = request.region.srcOffset,
@@ -409,8 +614,8 @@ void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
 
         vkCmdCopyBuffer(
             transferBuffer->GetVkCommandBuffer(),
-            srcBuffer->GetVkBuffer(),
-            dstBuffer->GetVkBuffer(),
+            srcBuffer.buffer,
+            dstBuffer.buffer,
             1,
             &copyRegion
         );
@@ -433,10 +638,266 @@ void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
 
 }
 
-void VulkanRHI::DestroyBuffer(Handle handle)
+// void VulkanBuffer::Map()
+// {
+//     if (mappedData != nullptr)
+//     {
+//         spdlog::warn("VulkanBuffer: Buffer is already mapped");
+//         return;
+//     }
+//
+//     vmaMapMemory(device->GetAllocator(), allocation, &mappedData);
+// }
+//
+// void VulkanBuffer::Unmap()
+// {
+//     if (mappedData == nullptr)
+//     {
+//         spdlog::warn("VulkanBuffer: Buffer is not mapped");
+//         return;
+//     }
+//
+//     vmaUnmapMemory(device->GetAllocator(), allocation);
+//     mappedData = nullptr;
+// }
+
+void VulkanRHI::DestroyBuffer(BufferHandle bufferHandle)
 {
-    GetBuffer(handle)->Terminate();
-    buffers.destroySlot(handle);
+    VulkanBuffer& vulkanBuffer = buffers[bufferHandle.handle.index];
+
+    if (vulkanBuffer.buffer != VK_NULL_HANDLE)
+    {
+        vmaDestroyBuffer(device->GetAllocator(), vulkanBuffer.buffer, vulkanBuffer.allocation);
+        vulkanBuffer.buffer = VK_NULL_HANDLE;
+        vulkanBuffer.allocation = VK_NULL_HANDLE;
+        vulkanBuffer.mappedData = nullptr;
+    }
+    //should remove it from the slot
+    //buffers.destroySlot(bufferHandle.handle);
+}
+
+void VulkanRHI::DestroyBuffer(VulkanBuffer & vulkanBuffer, VmaAllocator allocator)
+{
+    if (vulkanBuffer.buffer != VK_NULL_HANDLE)
+    {
+        vmaDestroyBuffer(allocator, vulkanBuffer.buffer, vulkanBuffer.allocation);
+        vulkanBuffer.buffer = VK_NULL_HANDLE;
+        vulkanBuffer.allocation = VK_NULL_HANDLE;
+        vulkanBuffer.mappedData = nullptr;
+    }
+}
+
+/*
+* uint32 VulkanRHI::CreatePipeline(const GraphicsPipelineDesc& desc)
+{
+    size_t hash = hashPipeline(desc);
+    //check if pipeline exists
+     if (pipelineCache.contains(hash))
+     {
+         return pipelineCache[hash];
+     }
+    VulkanGraphicsPipeline pipeline = VulkanGraphicsPipeline(*device);
+    pipeline.Initialize(desc);
+
+    pipelineStorage.push_back(pipeline);
+    size_t index = pipelineStorage.size();
+
+    pipelineCache[hash] = static_cast<uint32>(index);
+
+    return false;
+}
+ *
+ */
+
+PipelineHandle VulkanRHI::CreatePipeline(const GraphicsPipelineDesc & desc) {
+
+    VulkanShader& shader = shaders[desc.shader.resourceId.index];
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+
+    // vertices
+    VkVertexInputBindingDescription vertexBinding{
+        .binding = 0,
+        .stride = sizeof(Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+   };
+
+    //TODO: add this on the pipeline desc
+    std::vector<VkVertexInputAttributeDescription> vertexAttributes{
+            { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
+            { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, normal) },
+            { .location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Vertex, uvs) },
+            { .location = 3, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, color) },
+        };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &vertexBinding,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size()),
+        .pVertexAttributeDescriptions = vertexAttributes.data()
+    };
+
+    //topology
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+    };
+
+    //shaders
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{
+            { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+              .stage = VK_SHADER_STAGE_VERTEX_BIT,
+              .module = shader.vertexModule, .pName = "main"},
+            { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+              .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+              .module = shader.fragmentModule, .pName = "main" }
+    };
+
+    //viewport
+    VkPipelineViewportStateCreateInfo viewportState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = desc.viewportCount,
+        .scissorCount = desc.scissorCount,
+    };
+    // care as this might make the viewport immutable. Will need to check
+
+    std::vector<VkDynamicState> dynamicStates{
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = 2,
+        .pDynamicStates = dynamicStates.data()
+    };
+
+    //depth buffering
+    VkPipelineDepthStencilStateCreateInfo depthStencilState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = desc.depthTestEnable,
+        .depthWriteEnable = desc.depthWriteEnable,
+        .depthCompareOp = VulkanCompareOps[desc.depthCompareOp]
+    };
+
+    size_t imageFormatsSize = desc.imageFormats.size() > 0 ? desc.imageFormats.size() : 0;
+    std::vector<VkFormat> imageFormats;
+    for (size_t i = 0; i < imageFormatsSize; ++i)
+    {
+        imageFormats.push_back(VulkanFormats[desc.imageFormats[i]]);
+    }
+
+    //dynamic rendering
+    VkPipelineRenderingCreateInfo renderingCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = static_cast<uint32>(imageFormatsSize),
+        .pColorAttachmentFormats = &imageFormats.front(),
+        .depthAttachmentFormat = VulkanFormats[desc.depthImageFormat]
+    };
+
+    VkPipelineRasterizationStateCreateInfo rasterizationState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .polygonMode = VulkanPolygonModes[desc.polygonMode],
+        .cullMode = VulkanCullModes[desc.cullMode],
+        .frontFace = VulkanFrontFace[desc.frontFace],
+        .depthBiasEnable = VK_FALSE,
+        .lineWidth = 1.0f
+    };
+
+
+    VkPipelineMultisampleStateCreateInfo multisampleState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE
+    };
+
+    //colour blending. Still don't understand it 100%. Disabled
+    VkPipelineColorBlendAttachmentState blendAttachment{
+        .blendEnable = VK_FALSE,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+    };
+
+    VkPipelineColorBlendStateCreateInfo colorBlendState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .attachmentCount = 1,
+        .pAttachments = &blendAttachment
+    };
+
+    //pipeline layout
+    VkPushConstantRange pushConstantRange{
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .size = sizeof(VkDeviceAddress)
+    };
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0,
+        .pSetLayouts = nullptr,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &pushConstantRange
+    };
+
+    VkDevice logicalDevice = device->GetLogicalDevice();
+    vkCreatePipelineLayout(logicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
+
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &renderingCreateInfo,
+        .stageCount = 2,
+        .pStages = shaderStages.data(),
+        .pVertexInputState = &vertexInputState,
+        .pInputAssemblyState = &inputAssemblyState,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizationState,
+        .pMultisampleState = &multisampleState,
+        .pDepthStencilState = &depthStencilState,
+        .pColorBlendState = &colorBlendState,
+        .pDynamicState = &dynamicState,
+        .layout = pipelineLayout,
+        .renderPass = nullptr
+    };
+
+    //for pipeline derivation
+    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineCreateInfo.basePipelineIndex = -1;
+
+
+    if (vkCreateGraphicsPipelines(logicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS)
+    {
+        spdlog::error("VulkanRHI: Failed to create graphics pipeline!");
+        return PipelineHandle{ Handle::Invalid() };
+    }
+
+    //DestroyShader(shader, logicalDevice);
+    // vkDestroyShaderModule(device->GetLogicalDevice(), vertexModule, nullptr);
+    //vkDestroyShaderModule(device->GetLogicalDevice(), fragModule, nullptr);
+
+    VulkanGraphicsPipeline vulkanPipeline{
+        pipeline,
+        pipelineLayout
+    };
+    uint32 nextIndex = static_cast<uint32>(pipelines.size());
+    pipelines.push_back(vulkanPipeline);
+    return PipelineHandle{ Handle::Create(nextIndex) };
+}
+
+void VulkanRHI::DestroyPipeline(PipelineHandle pipelineHandle) {
+}
+
+void VulkanRHI::DestroyPipeline(VulkanGraphicsPipeline& vulkanPipeline, VkDevice logicalDevice) {
+
+    if (vulkanPipeline.pipeline != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(logicalDevice, vulkanPipeline.pipeline, nullptr);
+        vulkanPipeline.pipeline = VK_NULL_HANDLE;
+    }
+
+    if (vulkanPipeline.pipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(logicalDevice, vulkanPipeline.pipelineLayout, nullptr);
+        vulkanPipeline.pipelineLayout = VK_NULL_HANDLE;
+    }
 }
 
 
@@ -547,14 +1008,14 @@ void VulkanRHI::EndRendering()
 
 void VulkanRHI::BindPipeline(uint32_t pipelineID)
 {
-        if (pipelineID >= pipelineStorage.size())
-        {
-            spdlog::error("VulkanRHI: Invalid pipeline ID {}", pipelineID);
-            return;
-        }
-
-        VulkanGraphicsPipeline pipeline = pipelineStorage[pipelineID];
-        vkCmdBindPipeline(cmd->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.GetVkPipeline());
+        // if (pipelineID >= pipelineStorage.size())
+        // {
+        //     spdlog::error("VulkanRHI: Invalid pipeline ID {}", pipelineID);
+        //     return;
+        // }
+        //
+        // VulkanGraphicsPipeline pipeline = pipelineStorage[pipelineID];
+        // vkCmdBindPipeline(cmd->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 }
 
 void VulkanRHI::PrepareVertexBuffer(Handle meshHandle)
