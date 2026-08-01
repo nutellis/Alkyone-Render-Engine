@@ -98,7 +98,7 @@ void AlkyoneRenderEngine::Run() const
     desc.cullMode = CULL_MODE_NONE;
     desc.frontFace = FRONT_FACE_CLOCKWISE;
 
-    rhi->CreatePipeline(desc);
+    auto pipelinehandle = rhi->CreatePipeline(desc);
 
 
     while (!glfwWindowShouldClose(window->windowHandle)) {
@@ -123,16 +123,16 @@ void AlkyoneRenderEngine::Run() const
             .baseArrayLayer = 0,
             .layerCount = 1
         });
-        //rhi->ClearColour(Vector3f(0.5f,0.5f,0.1f));
+        rhi->ClearColour(Float3(0.5f,0.5f,0.1f));
 
         //setup the rendering info
 
         rhi->BeginRendering();
         //rendering commands here
 
-        rhi->BindPipeline(0);
+        rhi->BindPipeline(pipelinehandle);
 
-        //rhi->PrepareVertexBuffer(*meshgroup);
+        rhi->PrepareMegaBuffer(resourceManager->megaBufferHandle);
 
 
         //rhi->SetViewport(0, 0, window->GetWidth(), window->GetHeight());

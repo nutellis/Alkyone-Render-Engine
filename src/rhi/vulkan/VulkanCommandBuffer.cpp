@@ -7,51 +7,28 @@
 #include "rhi/vulkan/VulkanDefinitions.h"
 #include "rhi/vulkan/VulkanImage.h"
 
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanDevice& device, VkCommandBuffer buffer, CommandBufferLevel bufferLevel) :
-device(device),
-commandBuffer(buffer),
-bufferLevel(VulkanCommandBufferLevel[bufferLevel])
-{
-}
 
-VulkanCommandBuffer::~VulkanCommandBuffer()
-{
-}
 
-bool VulkanCommandBuffer::Initialize()
-{
-    return true;
-}
-
-void VulkanCommandBuffer::Terminate()
-{
-}
-
-VkCommandBuffer VulkanCommandBuffer::GetVkCommandBuffer() const
-{
-    return commandBuffer;
-}
-
-void VulkanCommandBuffer::Begin()
-{
-    VkCommandBufferBeginInfo cbOneTimeBI{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-    };
-
-    vkBeginCommandBuffer(commandBuffer, &cbOneTimeBI);
-}
-
-void VulkanCommandBuffer::Reset()
-{
-    vkResetCommandBuffer(commandBuffer, 0);
-}
-
-void VulkanCommandBuffer::End()
-{
-    //TODO: error handling
-   vkEndCommandBuffer(commandBuffer);
-}
+// void VulkanCommandBuffer::Begin()
+// {
+//     VkCommandBufferBeginInfo cbOneTimeBI{
+//         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+//         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+//     };
+//
+//     vkBeginCommandBuffer(commandBuffer, &cbOneTimeBI);
+// }
+//
+// void VulkanCommandBuffer::Reset()
+// {
+//     vkResetCommandBuffer(commandBuffer, 0);
+// }
+//
+// void VulkanCommandBuffer::End()
+// {
+//     //TODO: error handling
+//    vkEndCommandBuffer(commandBuffer);
+// }
 
 void VulkanCommandBuffer::Barrier(const ImageBarrier barrier)
 {

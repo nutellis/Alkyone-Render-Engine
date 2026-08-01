@@ -4,7 +4,7 @@
 
 #ifndef ALKYONERENDERENGINE_ISWAPCHAIN_H
 #define ALKYONERENDERENGINE_ISWAPCHAIN_H
-#include "IFrameSync.h"
+#include "IFrameContext.h"
 
 class ISwapChain
 {
@@ -17,7 +17,7 @@ public:
 
     virtual void RecreateSwapChain() = 0;
     virtual void CleanupSwapChain() = 0;
-    virtual void Present(IFrameSync& frameSync) = 0;
+    virtual void Present(IFrameContext& frameSync) = 0;
     [[nodiscard]] virtual bool IsFrameBufferResized() const = 0;
     virtual void ResetIsFrameBufferResized() const = 0;
 };

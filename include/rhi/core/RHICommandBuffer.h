@@ -4,7 +4,6 @@
 
 #ifndef ALKYONERENDERENGINE_ICOMMANDBUFFER_H
 #define ALKYONERENDERENGINE_ICOMMANDBUFFER_H
-#include <vector>
 
 #include "barriers/ImageBarrier.h"
 
@@ -28,19 +27,19 @@ struct CopyRequest
 };
 
 
-class ICommandBuffer
+struct RHICommandBuffer
 {
 public:
-    ICommandBuffer() = default;
-    virtual ~ICommandBuffer() = default;
-
-    virtual bool Initialize() = 0;
-    virtual void Terminate() = 0;
-
-    virtual void Begin() = 0;
-    virtual void Reset() = 0;
-
-    virtual void Barrier(ImageBarrier barrier) = 0;
+    // ICommandBuffer() = default;
+    // virtual ~ICommandBuffer() = default;
+    //
+    // virtual bool Initialize() = 0;
+    // virtual void Terminate() = 0;
+    //
+    // virtual void Begin() = 0;
+    // virtual void Reset() = 0;
+    //
+    // virtual void Barrier(ImageBarrier barrier) = 0;
 };
 
 

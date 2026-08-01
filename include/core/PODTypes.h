@@ -38,19 +38,20 @@ struct Handle
     Handle() : generation(0), index(0) { }
     Handle(unsigned int gen, unsigned int index) : generation(gen), index(index) { }
 
-    unsigned int generation: 16;
-    unsigned int index: 16;
+    unsigned int index: 20;
+    unsigned int generation: 12;
+
 
     [[nodiscard]] unsigned int ID() const
     {
-        return ((generation << 16) | index );
+        return ((generation << 20) | index );
     }
 
     static Handle Invalid() {
         return {0, 0xFFFFFFFF};
     }
     static Handle Create(unsigned int index) {
-        return {0, index};
+        return {1, index};
     }
 
     auto operator<=>(const Handle&) const = default;

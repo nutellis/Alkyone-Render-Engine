@@ -9,16 +9,15 @@
 #include <volk.h>
 #include "vk_mem_alloc.h"
 
-class VulkanDevice;
-
-
 struct VulkanBuffer : RHIBuffer
 {
+    VulkanBuffer();
     VulkanBuffer(void *mappedData, VkBuffer buffer, VmaAllocation allocation) :
         mappedData(mappedData),
         buffer(buffer),
         allocation(allocation)
     {}
+
 
 
     void * mappedData = nullptr;

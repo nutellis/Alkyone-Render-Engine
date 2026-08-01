@@ -6,11 +6,12 @@
 
 #define VOLK_IMPLEMENTATION
 
+#include <algorithm>
 #include <core/ApplicationWindow.h>
 
 #include <rhi/core/RHIGraphicsPipeline.h>
 #include "rhi/vulkan/VulkanCommandPool.h"
-#include "rhi/vulkan/VulkanFrameSync.h"
+#include "rhi/vulkan/VulkanFrameContext.h"
 
 #include <set>
 
@@ -29,6 +30,8 @@
 #include "rhi/vulkan/VulkanBufferTransforms.h"
 #include "rhi/vulkan/VulkanShader.h"
 #include "rhi/vulkan/VulkanSwapchain.h"
+#include "rhi/vulkan/managers/VulkanFrameManager.h"
+#include "rhi/vulkan/operations/VulkanResources.h"
 
 namespace
 {
@@ -72,19 +75,23 @@ bool VulkanRHI::Initialize()
 
     device = new VulkanDevice(instance);
     swapchain = new VulkanSwapchain(*device, *window);
-    frameSync = new VulkanFrameSync(*device, *swapchain);
+    frameManager = new VulkanFrameManager(*device, *swapchain);
 
     if ((device->Initialize()
         && swapchain->Initialize()
-        && frameSync->Initialize())
+        && frameManager->Initialize())
         == false)
     {
         spdlog::error("Alkyone RHI: Critical failure during Vulkan initialization");
         Terminate();
         return false;
     }
-    //allocate buffer space for each frame in flight.
-    device->GetGraphicsQueue()->AllocateCommandBuffers(FRAMES_IN_FLIGHT);
+
+    // create global descriptor set layout
+
+    //create global descriptor pool
+
+    //allocate the global descriptor set
 
     backend = RendererBackend::Vulkan;
     slangTargetOptions = ContextSlangTargetOptions(
@@ -126,7 +133,7 @@ void VulkanRHI::Terminate()
     pipelines.clear();
     pipelines.shrink_to_fit();
 
-    frameSync->Terminate();
+   // frameSync->Terminate();
     swapchain->Terminate();
     device->Terminate();
 
@@ -343,7 +350,7 @@ void VulkanRHI::Validate()
 {
     //validate if all relevant data is present before doing anything.
 
-    if (!frameSync && !swapchain && !device)
+    if (!frameManager && !swapchain && !device)
     {
         spdlog::error("VulkanRHI: Validation Failed, missing frameSync, swapchain or device");
         exit(EXIT_FAILURE);
@@ -523,49 +530,49 @@ RHIShader * VulkanRHI::GetShader(ShaderHandle ShaderHandle) {
 //-----------------------------------------------------------------------
 // BUFFERS
 //-----------------------------------------------------------------------
-BufferHandle VulkanRHI::CreateBuffer(const BufferDesc & desc) {
+// BufferHandle VulkanRHI::CreateBuffer(const BufferDesc & desc) {
+//
+//     VkBuffer buffer = VK_NULL_HANDLE;
+//     VmaAllocation allocation = VK_NULL_HANDLE;
+//
+//     VkBufferCreateInfo bufferCreateInfo = {
+//         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+//         .size = desc.size,
+//         .usage = Transformations::VulkanBufferUsageFlags(desc.usageFlags),
+//         .sharingMode = desc.sharingMode == SharingMode::EXCLUSIVE ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT
+//     };
+//
+//     VmaAllocationCreateInfo vmaAllocationCreateInfo = {
+//         .flags = Transformations::VulkanMemoryUsageFlags(desc.memoryUsageStrategy),
+//         .usage = VMA_MEMORY_USAGE_AUTO
+//     };
+//     VmaAllocationInfo allocInfo;
+//     VkResult result = vmaCreateBuffer(device->GetAllocator(), &bufferCreateInfo, &vmaAllocationCreateInfo, &buffer, &allocation, &allocInfo);
+//     if (result != VK_SUCCESS)
+//     {
+//         // buffer failed to init
+//         spdlog::error("Failed to create Vulkan buffer {}", (int)result);
+//         return BufferHandle { Handle::Invalid() };
+//     }
+//
+//     VulkanBuffer vulkanBuffer {
+//         allocInfo.pMappedData,
+//         buffer,
+//         allocation
+//     };
+//
+//     const uint32 nextIndex = static_cast<uint32>(buffers.size());
+//     buffers.push_back(std::move(vulkanBuffer));
+//
+//     return BufferHandle { Handle::Create(nextIndex )};
+// }
 
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VmaAllocation allocation = VK_NULL_HANDLE;
-
-    VkBufferCreateInfo bufferCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = desc.size,
-        .usage = Transformations::VulkanBufferUsageFlags(desc.usageFlags),
-        .sharingMode = desc.sharingMode == SharingMode::EXCLUSIVE ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT
-    };
-
-    VmaAllocationCreateInfo vmaAllocationCreateInfo = {
-        .flags = Transformations::VulkanMemoryUsageFlags(desc.memoryUsageStrategy),
-        .usage = VMA_MEMORY_USAGE_AUTO
-    };
-    VmaAllocationInfo allocInfo;
-    VkResult result = vmaCreateBuffer(device->GetAllocator(), &bufferCreateInfo, &vmaAllocationCreateInfo, &buffer, &allocation, &allocInfo);
-    if (result != VK_SUCCESS)
-    {
-        // buffer failed to init
-        spdlog::error("Failed to create Vulkan buffer {}", (int)result);
-        return BufferHandle { Handle::Invalid() };
-    }
-
-    VulkanBuffer vulkanBuffer {
-        allocInfo.pMappedData,
-        buffer,
-        allocation
-    };
-
-    const uint32 nextIndex = static_cast<uint32>(buffers.size());
-    buffers.push_back(std::move(vulkanBuffer));
-
-    return BufferHandle { Handle::Create(nextIndex )};
-}
-
-void VulkanRHI::HostCopyBuffer(BufferHandle bufferHandle, const void * src, size_t size, size_t offset)
+void VulkanRHI::HostCopyBuffer(BufferHandle bufferHandle, const void * src, size_t size, size_t offset, std::string offsetId)
 {
     VulkanBuffer & buffer = buffers[bufferHandle.handle.index];
     assert(buffer.mappedData != nullptr && "Fatal: Attempted to MemCopy into an unmapped or GPU_ONLY buffer.");
     memcpy(static_cast<char*>(buffer.mappedData) + offset, src, size);
-
+    buffer.offsets.insert({offsetId, offset});
 }
 
 RHIBuffer &VulkanRHI::GetBuffer(BufferHandle bufferHandle)
@@ -589,52 +596,52 @@ CopyRequest VulkanRHI::RecordCopyBuffer(BufferHandle src, BufferHandle dst, uint
 
 void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
 {
-    //get the queue for tranfer
-    VulkanQueue* transferQueue = device->GetTransferQueue();
-
-    //pool is already alive so now we need to create the command buffer
-    VulkanCommandPool* transferPool = transferQueue->GetCommandPool(0);
-
-    VulkanCommandBuffer * transferBuffer =
-        static_cast<VulkanCommandBuffer*>(
-            transferPool->AllocateCommandBuffer(COMMAND_BUFFER_LEVEL_PRIMARY)
-            );
-    transferBuffer->Begin();
-
-    for (const CopyRequest& request : copyRequests)
-    {
-        VulkanBuffer& srcBuffer = buffers[request.src.index];
-        VulkanBuffer& dstBuffer = buffers[request.dst.index];
-
-        VkBufferCopy copyRegion = {
-            .srcOffset = request.region.srcOffset,
-            .dstOffset = request.region.dstOffset,
-            .size = request.region.size
-        };
-
-        vkCmdCopyBuffer(
-            transferBuffer->GetVkCommandBuffer(),
-            srcBuffer.buffer,
-            dstBuffer.buffer,
-            1,
-            &copyRegion
-        );
-    }
-    transferBuffer->End();
-
-    VkCommandBuffer cmdBuffer = transferBuffer->GetVkCommandBuffer();
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuffer;
-
-   // transferQueue->SubmitCommandBuffer(*frameSync, *transferBuffer);
-    vkQueueSubmit(transferQueue->GetVkQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-
-    vkQueueWaitIdle(transferQueue->GetVkQueue());
-
-    vkFreeCommandBuffers(device->GetLogicalDevice(), transferPool->GetVkCommandPool(), 1, &cmdBuffer);
+   //  //get the queue for tranfer
+   //  VulkanQueue* transferQueue = device->GetTransferQueue();
+   //
+   //  //pool is already alive so now we need to create the command buffer
+   //  VulkanCommandPool* transferPool = transferQueue->GetCommandPool(0);
+   //
+   //  VulkanCommandBuffer * transferBuffer =
+   //      static_cast<VulkanCommandBuffer*>(
+   //          transferPool->AllocateCommandBuffer(COMMAND_BUFFER_LEVEL_PRIMARY)
+   //          );
+   //  transferBuffer->Begin();
+   //
+   //  for (const CopyRequest& request : copyRequests)
+   //  {
+   //      VulkanBuffer& srcBuffer = buffers[request.src.index];
+   //      VulkanBuffer& dstBuffer = buffers[request.dst.index];
+   //
+   //      VkBufferCopy copyRegion = {
+   //          .srcOffset = request.region.srcOffset,
+   //          .dstOffset = request.region.dstOffset,
+   //          .size = request.region.size
+   //      };
+   //
+   //      vkCmdCopyBuffer(
+   //          transferBuffer->GetVkCommandBuffer(),
+   //          srcBuffer.buffer,
+   //          dstBuffer.buffer,
+   //          1,
+   //          &copyRegion
+   //      );
+   //  }
+   //  transferBuffer->End();
+   //
+   //  VkCommandBuffer cmdBuffer = transferBuffer->GetVkCommandBuffer();
+   //
+   //  VkSubmitInfo submitInfo{};
+   //  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+   //  submitInfo.commandBufferCount = 1;
+   //  submitInfo.pCommandBuffers = &cmdBuffer;
+   //
+   // // transferQueue->SubmitCommandBuffer(*frameSync, *transferBuffer);
+   //  vkQueueSubmit(transferQueue->GetVkQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+   //
+   //  vkQueueWaitIdle(transferQueue->GetVkQueue());
+   //
+   //  vkFreeCommandBuffers(device->GetLogicalDevice(), transferPool->GetVkCommandPool(), 1, &cmdBuffer);
 
 }
 
@@ -661,31 +668,25 @@ void VulkanRHI::SubmitCopyBuffer(std::vector<CopyRequest> copyRequests)
 //     mappedData = nullptr;
 // }
 
-void VulkanRHI::DestroyBuffer(BufferHandle bufferHandle)
-{
-    VulkanBuffer& vulkanBuffer = buffers[bufferHandle.handle.index];
+// void VulkanRHI::DestroyBuffer(BufferHandle bufferHandle)
+// {
+//     VulkanBuffer& vulkanBuffer = buffers[bufferHandle.handle.index];
+//     VulkanResources::DestroyBuffer(vulkanBuffer,device->GetAllocator());
+//
+//     //should remove it from the slot
+//     //buffers.destroySlot(bufferHandle.handle);
+// }
 
-    if (vulkanBuffer.buffer != VK_NULL_HANDLE)
-    {
-        vmaDestroyBuffer(device->GetAllocator(), vulkanBuffer.buffer, vulkanBuffer.allocation);
-        vulkanBuffer.buffer = VK_NULL_HANDLE;
-        vulkanBuffer.allocation = VK_NULL_HANDLE;
-        vulkanBuffer.mappedData = nullptr;
-    }
-    //should remove it from the slot
-    //buffers.destroySlot(bufferHandle.handle);
-}
-
-void VulkanRHI::DestroyBuffer(VulkanBuffer & vulkanBuffer, VmaAllocator allocator)
-{
-    if (vulkanBuffer.buffer != VK_NULL_HANDLE)
-    {
-        vmaDestroyBuffer(allocator, vulkanBuffer.buffer, vulkanBuffer.allocation);
-        vulkanBuffer.buffer = VK_NULL_HANDLE;
-        vulkanBuffer.allocation = VK_NULL_HANDLE;
-        vulkanBuffer.mappedData = nullptr;
-    }
-}
+// void VulkanRHI::DestroyBuffer(VulkanBuffer & vulkanBuffer, VmaAllocator allocator)
+// {
+//     if (vulkanBuffer.buffer != VK_NULL_HANDLE)
+//     {
+//         vmaDestroyBuffer(allocator, vulkanBuffer.buffer, vulkanBuffer.allocation);
+//         vulkanBuffer.buffer = VK_NULL_HANDLE;
+//         vulkanBuffer.allocation = VK_NULL_HANDLE;
+//         vulkanBuffer.mappedData = nullptr;
+//     }
+// }
 
 /*
 * uint32 VulkanRHI::CreatePipeline(const GraphicsPipelineDesc& desc)
@@ -710,10 +711,38 @@ void VulkanRHI::DestroyBuffer(VulkanBuffer & vulkanBuffer, VmaAllocator allocato
  */
 
 PipelineHandle VulkanRHI::CreatePipeline(const GraphicsPipelineDesc & desc) {
-
     VulkanShader& shader = shaders[desc.shader.resourceId.index];
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
+    VkDevice logicalDevice = device->GetLogicalDevice();
+
+    VkDescriptorSetLayoutBinding gpBinding = {};
+    gpBinding.binding = 0;
+    gpBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    gpBinding.descriptorCount = 1;
+    gpBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &gpBinding;
+
+    VkDescriptorSetLayout setLayout;
+    vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &setLayout);
+
+    BufferDesc bufferDesc = {
+        10000 * 256,
+        BufferTypeBits::UNIFORM_BUFFER,
+        SharingMode::EXCLUSIVE,
+        MemoryUsageStrategy::CPU_TO_GPU
+    };
+
+    VulkanBuffer vulkanBuffer = VulkanResources::CreateBuffer(bufferDesc, device->GetAllocator());
+    {
+        const uint32 nextIndex = static_cast<uint32>(buffers.size());
+        buffers.push_back(std::move(vulkanBuffer));
+        uniformBuffer = BufferHandle { Handle::Create(nextIndex)};
+    }
+
 
     // vertices
     VkVertexInputBindingDescription vertexBinding{
@@ -826,19 +855,19 @@ PipelineHandle VulkanRHI::CreatePipeline(const GraphicsPipelineDesc & desc) {
     };
 
     //pipeline layout
-    VkPushConstantRange pushConstantRange{
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .size = sizeof(VkDeviceAddress)
-    };
+    // VkPushConstantRange pushConstantRange{
+    //     .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    //     .size = sizeof(VkDeviceAddress)
+    // };
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 0,
-        .pSetLayouts = nullptr,
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &pushConstantRange
+        .setLayoutCount = 1,
+        .pSetLayouts = &globalDescriptorSetLayout,
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges = nullptr
     };
 
-    VkDevice logicalDevice = device->GetLogicalDevice();
+
     vkCreatePipelineLayout(logicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo{
@@ -900,57 +929,137 @@ void VulkanRHI::DestroyPipeline(VulkanGraphicsPipeline& vulkanPipeline, VkDevice
     }
 }
 
+DescriptorHandle VulkanRHI::CreateGlobalDescriptor() {
 
-// }
-    //
-    // mesh.buffer->CopyData(mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
-    // mesh.buffer->CopyData(mesh.indices.data(), mesh.indices.size() * sizeof(uint32), mesh.vertices.size() * sizeof(Vertex));
-    //
-    // VulkanBuffer & vBuffer = static_cast<VulkanBuffer &>(*mesh.buffer);
-    //        memcpy(static_cast<char*>(dest) + offset, src, size);
+    // we whitelist what types are allowed inside our descriptor
+    std::array<VkDescriptorType, 4> allowedTypes = {
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+    };
 
-    //
-    // VkDeviceSize vBufSize{ sizeof(Vertex) * 3 };
-    // VkDeviceSize vOffset{ 0 };
-    // vkCmdBindVertexBuffers(cmd->GetVkCommandBuffer(), 0, 1, &vBuffer.buffer, &vOffset);
-    // vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT16);
+    //we get the descriptor types into a vulkan list
+    VkMutableDescriptorTypeListEXT typeList = {
+        .descriptorTypeCount = static_cast<uint32>(allowedTypes.size()),
+        .pDescriptorTypes = allowedTypes.data()
+    };
 
+    //then we create the create info struct
+    VkMutableDescriptorTypeCreateInfoEXT mutableDescInfo = {
+        .sType = VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT,
+        .pNext = nullptr,
+        .mutableDescriptorTypeListCount = 1,
+        .pMutableDescriptorTypeLists = &typeList
+    };
+
+    //next step is to create the descriptor layout
+
+    //random huge allocation
+    uint32 maxBindlessResources = 100000;
+
+    VkDescriptorSetLayoutBinding globalBinding {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_MUTABLE_EXT,
+        .descriptorCount = maxBindlessResources,
+        .stageFlags = VK_SHADER_STAGE_ALL //this guarantees that all shader stages will be able to see the descriptor
+    };
+
+    // immutable samplers. will have to wait for me to build rhiSampler first.
+    std::array<VkSampler, 8> samplers = {
+    };
+
+    VkDescriptorSetLayoutBinding samplerBinding {
+        .binding = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+        .descriptorCount = static_cast<uint32>(samplers.size()),
+        .stageFlags = VK_SHADER_STAGE_ALL,
+        .pImmutableSamplers = samplers.data()
+    };
+
+    //now we add the flags relevant to the bindless behaviour
+    VkDescriptorBindingFlags bindingFlags = {
+        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+        VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+    };
+
+    //create info for the flags
+    VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+        .pNext = &mutableDescInfo,
+        .bindingCount = 1,
+        .pBindingFlags = &bindingFlags
+    };
+
+    //create info for the layout set
+    VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = &bindingFlagsCreateInfo,
+        .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+        .bindingCount = 1,
+        .pBindings = &globalBinding
+    };
+    //VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT -> for allocating a specific number of slots.
+
+    VkDevice logicalDevice = device->GetLogicalDevice();
+
+    //TODO: check if failed
+    vkCreateDescriptorSetLayout(logicalDevice, &setLayoutCreateInfo, nullptr, &globalDescriptorSetLayout);
+
+    //time to create the pool
+    VkDescriptorPoolSize poolSize = {
+        .type = VK_DESCRIPTOR_TYPE_MUTABLE_EXT,
+        .descriptorCount = maxBindlessResources
+    };
+
+    VkDescriptorPoolCreateInfo poolCreateInfo {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext = &mutableDescInfo,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+        .maxSets = 1,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize
+    };
+
+    VkDescriptorPool globalPool = VK_NULL_HANDLE;
+
+    //TODO: add chekc
+    vkCreateDescriptorPool(logicalDevice, &poolCreateInfo, nullptr, &globalPool);
+
+    //allocate the descriptor set
+
+    VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext = &mutableDescInfo,
+        .descriptorPool = globalPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &globalDescriptorSetLayout
+    };
+
+    //TODO: ADD A CHECK IF FAILED
+    vkAllocateDescriptorSets(logicalDevice, &descriptorSetAllocateInfo, &globalDescriptorSet);
+
+    return DescriptorHandle { Handle::Invalid()};
+}
 bool VulkanRHI::BeginFrame()
 {
     Validate(); // hard assertion
 
-    //TODO: work this out.
-    // i dont like this as i introduce an extra variable
-    // when i already have frameSync->currentFrame and I should be using this,
-    // although current frame shouldnt change on a resize.
-    uint32 currentFrame = frameSync->BeginSynchronize();
-
-    if (currentFrame == 666)
-    {
-        return false;
-    }
-
-    cmd = &device->GetGraphicsQueue()->GetCommandPool(currentFrame)->GetCommandBuffer();
-
-    cmd->Reset();
-    cmd->Begin();
-
-    return true;
+    return frameManager->BeginSynchronize();
 }
 
 void VulkanRHI::EndFrame()
 {
-    //end command buffer
-    cmd->End();
-    //synchronize with the semaphores during submission
-    device->GetGraphicsQueue()->SubmitCommandBuffer(*frameSync, *cmd);
-    swapchain->Present(*frameSync);
 
-    frameSync->EndSynchronize();
+    frameManager->SubmitQueue();
+    frameManager->Present();
+    frameManager->EndSynchronize();
 }
 
 void VulkanRHI::ClearColour(Float3 colour)
 {
+    VulkanFrameManager *manager = static_cast<VulkanFrameManager *>(frameManager);
+    VkCommandBuffer commandBuffer = manager->GetCurrentCommandBuffer();
     VkClearColorValue clearColor = {};
     clearColor.float32[0] = colour.R;
     clearColor.float32[1] = colour.G;
@@ -966,7 +1075,7 @@ void VulkanRHI::ClearColour(Float3 colour)
     };
 
     //clear image
-    vkCmdClearColorImage(cmd->GetVkCommandBuffer(), swapchain->GetVkImage(frameSync->imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &clearRange);
+    vkCmdClearColorImage(commandBuffer, swapchain->GetVkImage(frameManager->imageIndex), VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &clearRange);
 
 }
 
@@ -981,7 +1090,7 @@ void VulkanRHI::BeginRendering()
 
     VkRenderingAttachmentInfo attachmentInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = swapchain->GetVkImageView(frameSync->imageIndex),
+        .imageView = swapchain->GetVkImageView(frameManager->imageIndex),
         .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -997,38 +1106,54 @@ void VulkanRHI::BeginRendering()
         .pColorAttachments = &attachmentInfo
     };
 
-    vkCmdBeginRendering(cmd->GetVkCommandBuffer(), &renderingInfo);
+    VulkanFrameManager *manager = static_cast<VulkanFrameManager *>(frameManager);
+    VkCommandBuffer commandBuffer = manager->GetCurrentCommandBuffer();
+
+    vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
 }
 
 void VulkanRHI::EndRendering()
 {
-    vkCmdEndRendering(cmd->GetVkCommandBuffer());
+    VulkanFrameManager *manager = static_cast<VulkanFrameManager *>(frameManager);
+    VkCommandBuffer commandBuffer = manager->GetCurrentCommandBuffer();
+
+    vkCmdEndRendering(commandBuffer);
 }
 
-void VulkanRHI::BindPipeline(uint32_t pipelineID)
+void VulkanRHI::BindPipeline(PipelineHandle pipelineHandle)
 {
-        // if (pipelineID >= pipelineStorage.size())
-        // {
-        //     spdlog::error("VulkanRHI: Invalid pipeline ID {}", pipelineID);
-        //     return;
-        // }
-        //
-        // VulkanGraphicsPipeline pipeline = pipelineStorage[pipelineID];
-        // vkCmdBindPipeline(cmd->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+//         if (pipelineID >= pipelineStorage.size())
+//         {
+//             spdlog::error("VulkanRHI: Invalid pipeline ID {}", pipelineID);
+//             return;
+//         }
+
+        VulkanGraphicsPipeline pipeline = pipelines[pipelineHandle.resourceId.index];
+      //  vkCmdBindPipeline(cmd->GetVkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 }
 
-void VulkanRHI::PrepareVertexBuffer(Handle meshHandle)
-{
+void VulkanRHI::PrepareMegaBuffer(BufferHandle bufferHandle) {
+    VulkanFrameManager *manager = static_cast<VulkanFrameManager *>(frameManager);
+    VkCommandBuffer commandBuffer = manager->GetCurrentCommandBuffer();
 
+    VulkanBuffer vulkanBuffer = buffers[bufferHandle.handle.index];
+    VkBuffer buffer = vulkanBuffer.buffer;
+    VkDeviceSize vertexOffset = 0;
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffer, &vertexOffset);
+
+    // 2. Bind Indices (Starts immediately after vertices)
+    VkDeviceSize indexOffset = static_cast<VkDeviceSize>(vulkanBuffer.offsets["index"]);
+    vkCmdBindIndexBuffer(commandBuffer, buffer, indexOffset, VK_INDEX_TYPE_UINT32);
+}
     // VkDeviceSize vBufSize{ sizeof(Vertex) * 3 };
     // VkDeviceSize vOffset{ 0 };
-    // vkCmdBindVertexBuffers(cmd->GetVkCommandBuffer(), 0, 1, &vBuffer.buffer, &vOffset);
-    // vkCmdBindIndexBuffer(cmd->GetVkCommandBuffer(), vBuffer.buffer, vBufSize, VK_INDEX_TYPE_UINT32);
-}
+    // vkCmdBindVertexBuffers(commandBuffer 0, 1, &buffer, &vOffset);
+    // vkCmdBindIndexBuffer(commandBuffer, buffer, vBufSize, VK_INDEX_TYPE_UINT32);
 
-void VulkanRHI::PrepareVertexBuffer(uint32_t bufferID)
-{
+
+void VulkanRHI::PrepareUniformBuffer() {
+
 }
 
 void VulkanRHI::BindIndexBuffer(uint32_t bufferID)
@@ -1037,6 +1162,9 @@ void VulkanRHI::BindIndexBuffer(uint32_t bufferID)
 
 void VulkanRHI::Draw()
 {
+    VulkanFrameManager *manager = static_cast<VulkanFrameManager *>(frameManager);
+    VkCommandBuffer commandBuffer = manager->GetCurrentCommandBuffer();
+
     VkViewport viewport = {
         0.0f,
         0.0f,
@@ -1047,7 +1175,7 @@ void VulkanRHI::Draw()
     };
 
     vkCmdSetViewport(
-        cmd->GetVkCommandBuffer(),
+        commandBuffer,
         0,
         1,
         &viewport);
@@ -1056,13 +1184,13 @@ void VulkanRHI::Draw()
         swapchain->GetVkExtent());
 
     vkCmdSetScissor(
-        cmd->GetVkCommandBuffer(),
+        commandBuffer,
         0,
         1,
         &scissors
     );
 
-    vkCmdDraw(cmd->GetVkCommandBuffer(),3,1,0,0);
+    vkCmdDraw(commandBuffer,3,1,0,0);
 }
 
 void VulkanRHI::WaitIdle()
@@ -1083,7 +1211,7 @@ void VulkanRHI::TransitionBarrier(const ImageBarrier& barrier)
         .newLayout = VulkanTransitionFlags[barrier.destState],
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = swapchain->GetVkImage(frameSync->imageIndex),
+        // .image = swapchain->GetVkImage(frameSync->imageIndex),
         .subresourceRange = {
             .aspectMask = VulkanImageAspectFlags(barrier.aspectMask),
             .baseMipLevel = barrier.baseMipLevel,
@@ -1100,7 +1228,7 @@ void VulkanRHI::TransitionBarrier(const ImageBarrier& barrier)
         .pImageMemoryBarriers = &imageBarrier
     };
 
-    vkCmdPipelineBarrier2(cmd->GetVkCommandBuffer(), &dependencyInfo);
+   // vkCmdPipelineBarrier2(cmd->GetVkCommandBuffer(), &dependencyInfo);
 }
 
 

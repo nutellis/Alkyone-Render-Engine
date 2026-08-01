@@ -1,0 +1,12 @@
+﻿//
+// Created by nutellis on 27/07/2026.
+//
+
+#ifndef ALKYONERENDERENGINE_RHIDESCRIPTOR_H
+#define ALKYONERENDERENGINE_RHIDESCRIPTOR_H
+
+
+struct RHIDescriptor {
+    
+};
+#endif //ALKYONERENDERENGINE_RHIDESCRIPTOR_H

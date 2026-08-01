@@ -197,9 +197,19 @@ bool VulkanDevice::CreateLogicalDevice()
 {
     auto queueFamilies = PopulateQueueFamilies();
 
+    VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT enabledVkMutableDescriptorFeatures {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT,
+        .pNext = nullptr,
+        .mutableDescriptorType = true
+    };
+
     VkPhysicalDeviceVulkan12Features enabledVk12Features{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext = &enabledVkMutableDescriptorFeatures,
         .descriptorIndexing = true,
+        .shaderSampledImageArrayNonUniformIndexing = true,
+        .descriptorBindingSampledImageUpdateAfterBind = true, // update while descriptor is in use
+        .descriptorBindingPartiallyBound = true, //bindless and doesnt crash if slots are empty
         .descriptorBindingVariableDescriptorCount = true,
         .runtimeDescriptorArray = true,
         .bufferDeviceAddress = true

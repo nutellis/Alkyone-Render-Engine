@@ -8,7 +8,7 @@
 #include "rhi/vulkan/VulkanCommandPool.h"
 #include "rhi/vulkan/VulkanDefinitions.h"
 #include "rhi/vulkan/VulkanDevice.h"
-#include "rhi/vulkan/VulkanFrameSync.h"
+#include "rhi/vulkan/VulkanFrameContext.h"
 #include "spdlog/spdlog.h"
 
 VulkanQueue::VulkanQueue(VulkanDevice & device, uint32 inFamilyIndex, CommandQueueType inType) :
@@ -99,12 +99,12 @@ void VulkanQueue::AllocateCommandBuffers(const uint32 count)
 }
 
 //TODO: i probably need a SubmitImmediate(ICommandBuffer & cmdBuffer)
-void VulkanQueue::SubmitCommandBuffer(IFrameSync & sync, ICommandBuffer & cmdBuffer)
+void VulkanQueue::SubmitCommandBuffer(IFrameContext & sync, RHICommandBuffer & cmdBuffer)
 {
     const VulkanCommandBuffer & vkCmdBuffer = static_cast<VulkanCommandBuffer&>(cmdBuffer);
     const VkCommandBuffer vkCmd = vkCmdBuffer.GetVkCommandBuffer();
 
-    const VulkanFrameSync & vkFrameSync = static_cast<VulkanFrameSync&>(sync);
+    const VulkanFrameContext & vkFrameSync = static_cast<VulkanFrameContext&>(sync);
 
     //create the submit info for the queue and handle synchronization
 

@@ -10,17 +10,9 @@
 //TODO: move this to an options file and make it variable (double/tripple buffering)
 static constexpr unsigned int FRAMES_IN_FLIGHT = 2;
 
-class IFrameSync
+struct IFrameContext
 {
-public:
-    IFrameSync() = default;
-    virtual ~IFrameSync() = default;
 
-    virtual bool Initialize() = 0;
-    virtual void Terminate() = 0;
-    virtual uint32 BeginSynchronize() = 0;
-    virtual void ResetSyncObjects() = 0;
-    virtual void EndSynchronize() = 0;
 };
 
 

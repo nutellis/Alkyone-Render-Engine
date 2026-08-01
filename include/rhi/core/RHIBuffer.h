@@ -10,8 +10,10 @@ struct BufferHandle {
     Handle handle;
 };
 
-struct RHIBuffer
-{};
+struct RHIBuffer {
+
+    std::unordered_map<std::string, size_t> offsets;
+};
 
 
 #endif //ALKYONERENDERENGINE_IBUFFER_H

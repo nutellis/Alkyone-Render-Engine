@@ -55,8 +55,9 @@ void ResourceManager::UploadMeshData(std::span<const Vertex> vertices, std::span
 
     BufferHandle stagingBufferHandle = rhi.CreateBuffer(stagingDesc);
 
-    rhi.HostCopyBuffer(stagingBufferHandle, vertices.data(), verticesSize, 0);
-    rhi.HostCopyBuffer(stagingBufferHandle,indices.data(), indicesSize, verticesSize);
+    rhi.HostCopyBuffer(stagingBufferHandle, vertices.data(), verticesSize, 0, "vertex");
+    rhi.HostCopyBuffer(stagingBufferHandle,indices.data(), indicesSize, verticesSize, "index");
+
 
     BufferDesc gpuDesc = {
         .size = totalSize,
@@ -74,6 +75,7 @@ void ResourceManager::UploadMeshData(std::span<const Vertex> vertices, std::span
 
     spdlog::info("ResourceManager: Uploaded mesh data to GPU. Total size: {} bytes", totalSize);
 
+    indexBufferOffset = verticesSize;
     megaBufferHandle = gpuBufferHandle;
 }
 

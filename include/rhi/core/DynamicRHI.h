@@ -9,21 +9,25 @@
 #include <string>
 
 #include "RHIBuffer.h"
-#include "ICommandBuffer.h"
+#include "RHICommandBuffer.h"
 #include "slang.h"
 #include "containers/SlotMap.h"
 #include "math/Vector3.h"
 #include "shader/RHIShader.h"
 #include "resources/ResourceHandle.h"
 
+
+class RHIFrameManager;
 class ARWindow;
-class IFrameSync;
+class IFrameContext;
 
 struct ShaderCompileDesc;
 struct CommandPoolDesc;
 struct GraphicsPipelineDesc;
-struct ImageBarrier;
 struct BufferDesc;
+struct DescriptorDesc;
+
+struct ImageBarrier;
 struct Handle;
 
 enum class RendererBackend {
@@ -77,7 +81,7 @@ public:
     // Buffers
     virtual BufferHandle CreateBuffer(const BufferDesc & desc) = 0;
     virtual RHIBuffer &GetBuffer(BufferHandle bufferHandle) = 0;
-    virtual void HostCopyBuffer(BufferHandle bufferHandle, const void * src, size_t size, size_t offset) = 0;
+    virtual void HostCopyBuffer(BufferHandle bufferHandle, const void *src, size_t size, size_t offset, std::string offsetId) = 0;
     virtual CopyRequest RecordCopyBuffer(BufferHandle src, BufferHandle dst, uint64 size, size_t srcOffset, size_t dstOffset) = 0;
     virtual void SubmitCopyBuffer(std::vector<CopyRequest> copyRequests) = 0;
     virtual void DestroyBuffer(BufferHandle bufferHandle) = 0;
@@ -86,14 +90,20 @@ public:
     virtual PipelineHandle CreatePipeline(const GraphicsPipelineDesc & desc) = 0;
     virtual void DestroyPipeline(PipelineHandle pipelineHandle) = 0;
 
+
+    //Descriptors
+    virtual DescriptorHandle CreateGlobalDescriptor() = 0;
+    virtual void
+
+
     // Drawing
     virtual bool BeginFrame() = 0;
     virtual void EndFrame() = 0;
     virtual void ClearColour(Float3 colour) = 0;
     virtual void BeginRendering() = 0;
     virtual void EndRendering() = 0;
-    virtual void BindPipeline(uint32_t pipelineID) = 0;
-    virtual void PrepareVertexBuffer(uint32_t bufferID) = 0;
+    virtual void BindPipeline(PipelineHandle pipelineHandle) = 0;
+    virtual void PrepareMegaBuffer(BufferHandle bufferHandle) = 0;
     //virtual void PrepareVertexBuffer(Mesh& mesh) = 0;
     virtual void BindIndexBuffer(uint32_t bufferID) = 0;
     //TODO: find out what is needed.
@@ -109,6 +119,8 @@ protected:
     Slang::ComPtr<slang::IGlobalSession> globalSession;
     Slang::ComPtr<slang::ISession> slangSession;
     SlangGlobalSessionDesc desc = {};
+
+    RHIFrameManager * frameManager;
 
 };
 

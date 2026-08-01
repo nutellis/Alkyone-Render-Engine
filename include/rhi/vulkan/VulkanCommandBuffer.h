@@ -4,33 +4,33 @@
 
 #ifndef ALKYONERENDERENGINE_VULKANCOMMANDBUFFER_H
 #define ALKYONERENDERENGINE_VULKANCOMMANDBUFFER_H
-#include "rhi/core/ICommandBuffer.h"
+#include "rhi/core/RHICommandBuffer.h"
 #include "volk.h"
 
 class VulkanDevice;
 
-class VulkanCommandBuffer: public ICommandBuffer
+struct VulkanCommandBuffer: public RHICommandBuffer
 {
 
 public:
-    VulkanCommandBuffer(VulkanDevice& device, VkCommandBuffer buffer, CommandBufferLevel bufferLevel);
-    ~VulkanCommandBuffer() override;
-    bool Initialize() override;
-    void Terminate() override;
 
-    [[nodiscard]] VkCommandBuffer GetVkCommandBuffer() const;
-    void Begin() override;
-    void Reset() override;
-    void End();
+    VulkanCommandBuffer();
+    VulkanCommandBuffer(VkCommandBuffer buffer, CommandBufferLevel bufferLevel);
 
-    void Barrier(ImageBarrier barrier) override;
+    // ~VulkanCommandBuffer() override;
+    // bool Initialize() override;
+    // void Terminate() override;
+    //
+    // [[nodiscard]] VkCommandBuffer GetVkCommandBuffer() const;
+    // void Begin() override;
+    // void Reset() override;
+    // void End();
+    //
+    // void Barrier(ImageBarrier barrier) override;
 
-private:
     VkCommandBufferLevel bufferLevel {};
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 
-    // Public immutable reference to be accessed directly
-    VulkanDevice& device;
 };
 
 

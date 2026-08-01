@@ -20,7 +20,7 @@
 struct VulkanShader;
 struct VulkanBuffer;
 struct VulkanGraphicsPipeline;
-class VulkanFrameSync;
+class VulkanFrameContext;
 class VulkanCommandBuffer;
 class VulkanDevice;
 class VulkanSwapchain;
@@ -69,10 +69,10 @@ public:
 
 
     //Buffers
-    BufferHandle CreateBuffer(const BufferDesc & desc) override;
+    //BufferHandle CreateBuffer(const BufferDesc & desc) override;
 
     RHIBuffer &GetBuffer(BufferHandle bufferHandle) override;
-    void HostCopyBuffer(BufferHandle bufferHandle, const void * src, size_t size, size_t offset) override;
+    void HostCopyBuffer(BufferHandle bufferHandle, const void *src, size_t size, size_t offset, std::string offsetId) override;
     CopyRequest RecordCopyBuffer(BufferHandle src, BufferHandle dst, uint64 size, size_t srcOffset, size_t dstOffset) override;
     void SubmitCopyBuffer(std::vector<CopyRequest> copyRequests) override;
 
@@ -84,17 +84,23 @@ public:
     void DestroyPipeline(PipelineHandle pipelineHandle) override;
     void DestroyPipeline(VulkanGraphicsPipeline& vulkanPipeline, VkDevice logicalDevice);
 
+    //Descriptors
+    DescriptorHandle CreateGlobalDescriptor() override;
+
+
     //Drawing
     bool BeginFrame() override;
     void EndFrame() override;
     void ClearColour(Float3 colour) override;
     void BeginRendering() override;
     void EndRendering() override;
-    void BindPipeline(uint32_t pipelineID) override;
-    void PrepareVertexBuffer(Handle meshHandle);
+    void BindPipeline(PipelineHandle pipelineHandle) override;
+    void PrepareMegaBuffer(BufferHandle bufferHandle) override;
+
+    void PrepareUniformBuffer();
+
     // void PrepareVertexBuffer(Mesh& mesh) override;
 
-    void PrepareVertexBuffer(uint32_t bufferID) override;
     void BindIndexBuffer(uint32_t bufferID) override;
     void Draw() override;
     void WaitIdle() override;
@@ -113,7 +119,7 @@ private:
 
     ARWindow * window = nullptr;
 
-    VulkanFrameSync* frameSync = nullptr;
+    VulkanFrameContext* frameSync = nullptr;
 
     //pipelines
     std::unordered_map<size_t, uint32> pipelineCache;
@@ -124,6 +130,13 @@ private:
     std::vector<VulkanBuffer> buffers;
     std::vector<VulkanShader> shaders;
     std::vector<VulkanGraphicsPipeline> pipelines;
+
+    BufferHandle uniformBuffer;
+
+
+    //TODO: MOVE THIS INSIDE A MANAGER OR WRAPPER
+    VkDescriptorSet globalDescriptorSet = VK_NULL_HANDLE;
+    VkDescriptorSetLayout globalDescriptorSetLayout = VK_NULL_HANDLE;
 };
 
 

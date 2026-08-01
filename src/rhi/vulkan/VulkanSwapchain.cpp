@@ -6,7 +6,7 @@
 
 #include "core/ApplicationWindow.h"
 #include "rhi/vulkan/VulkanDevice.h"
-#include "rhi/vulkan/VulkanFrameSync.h"
+#include "rhi/vulkan/VulkanFrameContext.h"
 #include "rhi/vulkan/VulkanQueue.h"
 #include "spdlog/spdlog.h"
 
@@ -68,10 +68,10 @@ void VulkanSwapchain::CleanupSwapChain()
     vkDestroySwapchainKHR(parent.GetLogicalDevice(), swapChain, nullptr);
 }
 
-void VulkanSwapchain::Present(IFrameSync & frameSync)
+void VulkanSwapchain::Present(IFrameContext & frameSync)
 {
     //wait for rendering semaphores
-    const VulkanFrameSync & frame = static_cast<VulkanFrameSync&>(frameSync);
+    const VulkanFrameContext & frame = static_cast<VulkanFrameContext&>(frameSync);
 
 
     //present info

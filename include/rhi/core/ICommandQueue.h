@@ -6,8 +6,8 @@
 #define ALKYONERENDERENGINE_ICOMMANDQUEUE_H
 #include "core/PODTypes.h"
 
-class IFrameSync;
-class ICommandBuffer;
+class IFrameContext;
+class RHICommandBuffer;
 
 enum CommandQueueType
 {
@@ -26,7 +26,7 @@ public:
     virtual void Terminate() = 0;
 
     virtual void AllocateCommandBuffers(uint32 count) = 0;
-    virtual void SubmitCommandBuffer(IFrameSync& sync, ICommandBuffer& cmdBuffer) = 0;
+    virtual void SubmitCommandBuffer(IFrameContext& sync, RHICommandBuffer& cmdBuffer) = 0;
 };
 
 

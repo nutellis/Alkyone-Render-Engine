@@ -68,7 +68,20 @@ add_executable(AlkyoneRenderer main.cpp ${SRC_FILES}
         include/rhi/vulkan/VulkanShader.h
         include/rhi/descriptors/ShaderCompileDesc.h
         include/rhi/vulkan/VulkanBufferTransforms.h
-        include/resources/ResourceHandle.h)
+        include/resources/ResourceHandle.h
+        src/rendering/render-pass/GeometryPass.cpp
+        include/rendering/render-pass/GeometryPass.h
+        include/rhi/descriptors/DescriptorDesc.h
+        include/rhi/core/RHIDescriptor.h
+        include/rhi/vulkan/VulkanDescriptor.h
+        src/utilities/BitmaskAllocator.cpp
+        include/utilities/BitmaskAllocator.h
+        include/rhi/core/managers/FrameManager.cpp
+        include/rhi/core/managers/RHIFrameManager.h
+        include/rhi/vulkan/managers/VulkanFrameManager.cpp
+        include/rhi/vulkan/managers/VulkanFrameManager.h
+        include/rhi/vulkan/operations/VulkanResources.h
+        include/rhi/vulkan/operations/VulkanCommands.h)
 
 target_compile_options(AlkyoneRenderer
         PRIVATE

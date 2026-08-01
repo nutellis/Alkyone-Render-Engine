@@ -8,6 +8,7 @@
 
 struct RHIShader;
 struct RHIGraphicsPipeline;
+struct RHIDescriptor;
 
 template<typename T>
 struct ResourceHandle
@@ -22,5 +23,6 @@ struct ResourceHandle
 
 using ShaderHandle = ResourceHandle<RHIShader>;
 using PipelineHandle = ResourceHandle<RHIGraphicsPipeline>;
+using DescriptorHandle = ResourceHandle<RHIDescriptor>;
 
 #endif //ALKYONERENDERENGINE_RESOURCEHANDLE_H

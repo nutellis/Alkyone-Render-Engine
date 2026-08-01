@@ -13,7 +13,7 @@
 
 #include <core/PODTypes.h>
 
-#include "rhi/core/IFrameSync.h"
+#include "rhi/core/IFrameContext.h"
 
 class VulkanCommandPool;
 class VulkanDevice;
@@ -37,7 +37,7 @@ public:
     VulkanCommandPool* GetCommandPool(uint32 index);
 
     void AllocateCommandBuffers(uint32 count) override;
-    void SubmitCommandBuffer(IFrameSync& sync, ICommandBuffer& cmdBuffer) override;
+    void SubmitCommandBuffer(IFrameContext& sync, RHICommandBuffer& cmdBuffer) override;
 
 private:
 

@@ -46,7 +46,7 @@ public:
     ShaderHandle LoadShader(const std::string &filename, const std::string &vertexEntryName,
                             const std::string &fragmentEntryName);
 
-
+    BufferHandle megaBufferHandle;
 private:
     DynamicRHI& rhi;
 
@@ -54,7 +54,8 @@ private:
     std::unordered_map<std::string, ShaderHandle> shaderCache;
 
     SlotMap<MeshGroup> meshRegistry;
-    BufferHandle megaBufferHandle;
+
+    size_t indexBufferOffset;
 
     //SlotMap<Scene> SceneRegistry;
     //SlotMap<Texture> textureRegistry;

@@ -7,42 +7,32 @@
 
 #include <vector>
 
-#include <rhi/core/ICommandPool.h>
+#include <rhi/core/RHICommandPool.h>
 #include "VulkanDevice.h"
 
 class VulkanCommandBuffer;
 struct CommandPoolDesc;
 
 
-class VulkanCommandPool: public ICommandPool
+struct  VulkanCommandPool: public RHICommandPool
 {
 public:
-    VulkanCommandPool() = delete;
-    VulkanCommandPool(VulkanDevice& device, uint32 queueFamilyIndex);
-    ~VulkanCommandPool() override;
+    VulkanCommandPool();
+    VulkanCommandPool(VkCommandPool pool) : commandPool(pool) {}
 
-
-    bool Initialize() override;
-    void Terminate() override;
-
-    ICommandBuffer* AllocateCommandBuffer(CommandBufferLevel bufferLevel) override;
-
-    [[nodiscard]] VulkanCommandBuffer& GetCommandBuffer() const;
-
-    [[nodiscard]] VkCommandPool GetVkCommandPool() const;
-
-
-private:
-    VulkanDevice & device;
-
-    uint32 queueFamilyIndex;
+    // ~VulkanCommandPool() override;
+    //
+    //
+    // bool Initialize() override;
+    // void Terminate() override;
+    //
+    // ICommandBuffer* AllocateCommandBuffer(CommandBufferLevel bufferLevel) override;
+    //
+    // [[nodiscard]] VulkanCommandBuffer& GetCommandBuffer() const;
+    //
+    // [[nodiscard]] VkCommandPool GetVkCommandPool() const;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
-
-    //std::vector<VulkanCommandBuffer *> commandBuffers;
-    //TODO: this is a temp solution
-    VulkanCommandBuffer * commandBuffer;
-
 };
 
 

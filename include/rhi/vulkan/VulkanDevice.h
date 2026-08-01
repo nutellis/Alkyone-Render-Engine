@@ -26,7 +26,8 @@ const std::vector validationLayers = {
 };
 
 inline std::vector deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME
 };
 
 class VulkanQueue;

@@ -32,7 +32,7 @@ public:
     void Terminate() override;
     void RecreateSwapChain() override;
     void CleanupSwapChain() override;
-    void Present(IFrameSync& frameSync) override;
+    void Present(IFrameContext& frameSync) override;
 
     [[nodiscard]] bool IsFrameBufferResized() const override;
     void ResetIsFrameBufferResized() const override;
